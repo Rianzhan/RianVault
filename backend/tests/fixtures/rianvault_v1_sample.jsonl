@@ -1,0 +1,6 @@
+{"type":"conversation","format":"rianvault-jsonl-v1","platform":"omate","conversation_id":"om-100","title":"JSONL 测试会话","extra":{"origin":"fixture"}}
+{"type":"message","conversation_id":"om-100","message_id":"m1","role":"user","text":"第一条用户消息","timestamp":"2025-03-14T21:02:11+08:00"}
+{"type":"message","conversation_id":"om-100","message_id":"m2","role":"assistant","text":"第一条助手回复","timestamp":"2025-03-14T21:02:30+08:00","model":"gpt-4o"}
+{"type":"message","conversation_id":"om-100","message_id":"m3","role":"user","text":"无时区时间戳的消息","timestamp":"2025-03-14T21:03:00"}
+{"type":"message","conversation_id":"om-100","role":"user","text":"这条没有 message_id","timestamp":"2025-03-14T21:03:30+08:00"}
+{"type":"message","conversation_id":"om-100","message_id":"bad1","timestamp":"2025-03-14T21:04:00+08:00"}

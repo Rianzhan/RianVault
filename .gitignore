@@ -1,0 +1,41 @@
+# --- secrets & local env ---
+.env
+.env.*
+!.env.example
+
+# --- private data (NEVER commit) ---
+exports/
+backups/
+data/
+*.sqlite
+*.sqlite3
+*-dev.db
+e2e-*.db
+real_*.json
+conversations.json
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# --- node / frontend ---
+node_modules/
+frontend/dist/
+
+# --- ml model caches ---
+.cache/
+models/
+
+# --- os / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

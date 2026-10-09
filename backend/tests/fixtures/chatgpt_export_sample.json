@@ -1,0 +1,86 @@
+[
+  {
+    "title": "合成测试会话",
+    "create_time": 1700000000.0,
+    "update_time": 1700000004.0,
+    "id": "conv-001",
+    "default_model_slug": "gpt-4",
+    "future_field_xyz": true,
+    "mapping": {
+      "root-0": {
+        "id": "root-0",
+        "message": null,
+        "parent": null,
+        "children": ["n-u1"]
+      },
+      "n-u1": {
+        "id": "n-u1",
+        "message": {
+          "id": "msg-u1",
+          "author": {"role": "user"},
+          "create_time": 1700000001.0,
+          "content": {"content_type": "text", "parts": ["你好，这是第一条。"]},
+          "status": "finished_successfully",
+          "metadata": {}
+        },
+        "parent": "root-0",
+        "children": ["n-a1"]
+      },
+      "n-a1": {
+        "id": "n-a1",
+        "message": {
+          "id": "msg-a1",
+          "author": {"role": "assistant"},
+          "create_time": 1700000002.0,
+          "content": {"content_type": "text", "parts": ["你好！我是助手。"]},
+          "status": "finished_successfully",
+          "metadata": {"model_slug": "gpt-4"}
+        },
+        "parent": "n-u1",
+        "children": ["n-u2"]
+      },
+      "n-a1-alt": {
+        "id": "n-a1-alt",
+        "message": {
+          "id": "msg-a1-alt",
+          "author": {"role": "assistant"},
+          "create_time": 1700000002.5,
+          "content": {"content_type": "text", "parts": ["这是被切换掉的另一个分支，不应进入主时间线。"]},
+          "status": "finished_successfully",
+          "metadata": {"model_slug": "gpt-4"}
+        },
+        "parent": "n-u1",
+        "children": []
+      },
+      "n-u2": {
+        "id": "n-u2",
+        "message": {
+          "id": "msg-u2",
+          "author": {"role": "user"},
+          "create_time": 1700000003.0,
+          "content": {"content_type": "multimodal_text", "parts": ["给我讲讲记忆。", {"content_type": "image_asset_pointer", "asset_pointer": "file-service://fake"}]},
+          "status": "finished_successfully",
+          "metadata": {}
+        },
+        "parent": "n-a1",
+        "children": ["n-a2"]
+      },
+      "n-a2": {
+        "id": "n-a2",
+        "message": {
+          "id": "msg-a2",
+          "author": {"role": "assistant"},
+          "create_time": 1700000004.0,
+          "content": {"content_type": "text", "parts": ["记忆是可以追溯来源的。"]},
+          "status": "finished_successfully",
+          "metadata": {"model_slug": "gpt-4o"},
+          "future_msg_field": {"x": 1}
+        },
+        "parent": "n-u2",
+        "children": []
+      }
+    },
+    "current_node": "n-a2",
+    "moderation_results": []
+  }
+]

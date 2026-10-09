@@ -1,0 +1,54 @@
+# Production compose (phase 3 target). HARD RULE: db and qdrant MUST NOT
+# publish host ports. API is the only entrypoint; Caddy terminates HTTPS in
+# front of it. CI test test_compose_security.py enforces this file stays safe.
+services:
+  api:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile.backend
+    env_file: ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    networks:
+      - internal
+      - web
+    restart: unless-stopped
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: rianvault
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: rianvault
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    # NO ports: internal network only.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rianvault"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrantdata:/qdrant/storage
+    networks:
+      - internal
+    # NO ports: internal network only.
+    restart: unless-stopped
+
+networks:
+  internal:
+    internal: true
+  web:
+
+volumes:
+  pgdata:
+  qdrantdata:

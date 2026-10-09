@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install
+        run: pip install -e backend[dev]
+      - name: ruff
+        run: ruff check backend && ruff format --check backend
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+      - name: pytest
+        run: cd backend && python -m pytest -q
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: build
+        run: |
+          cd frontend
+          npm ci
+          npm run build

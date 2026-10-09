@@ -1,0 +1,58 @@
+/* RianVault design tokens —— 私人档案馆基调：暖纸、墨色、留白。
+   所有视觉从这里取变量，禁止在组件里写死颜色/字号，方便以后换主题与壁纸。 */
+
+:root {
+  /* 色彩 */
+  --rv-bg: #faf7f1;
+  --rv-bg-soft: #f4efe6;
+  --rv-surface: #fffdf9;
+  --rv-ink: #2e2a24;
+  --rv-ink-soft: #6f675a;
+  --rv-ink-faint: #a39a8b;
+  --rv-line: #e5ddd0;
+  --rv-line-strong: #d4c9b8;
+  --rv-accent: #8a5a2b;
+  --rv-accent-hover: #74491f;
+  --rv-accent-soft: #f0e4d3;
+  --rv-evidence: #7a4a1f;
+  --rv-context: #4a5d6b;
+  --rv-danger: #9c3d2e;
+  --rv-success: #4a6b3a;
+
+  /* 字体 */
+  --rv-font-serif: Georgia, "Songti SC", "SimSun", serif;
+  --rv-font-sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --rv-font-mono: "SF Mono", Consolas, monospace;
+
+  /* 字号 */
+  --rv-text-xs: 12px;
+  --rv-text-sm: 13px;
+  --rv-text-md: 15px;
+  --rv-text-lg: 18px;
+  --rv-text-xl: 24px;
+
+  /* 间距 */
+  --rv-space-1: 4px;
+  --rv-space-2: 8px;
+  --rv-space-3: 16px;
+  --rv-space-4: 24px;
+  --rv-space-5: 40px;
+  --rv-space-6: 64px;
+
+  /* 形状 */
+  --rv-radius-sm: 6px;
+  --rv-radius: 10px;
+  --rv-radius-lg: 16px;
+
+  /* 阅读宽度 */
+  --rv-reading-width: 72ch;
+}
+
+body {
+  margin: 0;
+  background: var(--rv-bg);
+  color: var(--rv-ink);
+  font-family: var(--rv-font-sans);
+  font-size: var(--rv-text-md);
+  line-height: 1.65;
+}
