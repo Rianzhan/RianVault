@@ -5,12 +5,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.deps import require_owner
 from app.db.session import get_db
 from app.models import Import, ImportQuarantine
 from app.schemas.import_ import ImportOut, ImportReport, QuarantineOut
 from app.services.importers.pipeline import ImportRejected, run_import
 
-router = APIRouter(prefix="/api/imports", tags=["imports"])
+router = APIRouter(
+    prefix="/api/imports",
+    tags=["imports"],
+    dependencies=[Depends(require_owner)],  # import 仅 owner（权限矩阵）
+)
 
 
 @router.post("", response_model=ImportReport)

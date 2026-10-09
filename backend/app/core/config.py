@@ -20,9 +20,8 @@ class Settings(BaseSettings):
     embedding_device: str = "cpu"
     chunk_max_tokens: int = 600
 
-    # Auth tokens (used from T4 on). Must be provided via .env; empty = auth not configured.
-    rianvault_owner_token: str = ""
-    rianvault_zhan_token: str = ""
+    # Auth tokens live in the api_tokens table (single source of truth).
+    # Mint via: python scripts/create_token.py --role owner --name "..."
 
     import_max_file_mb: int = 512
     log_level: str = "INFO"

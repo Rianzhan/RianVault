@@ -25,36 +25,34 @@ def _create_memory(client: TestClient, **kw) -> dict:
 
 
 class TestMemoryLifecycle:
-    def test_full_cycle(self, client: TestClient) -> None:
+    def test_full_cycle(self, client: TestClient, zhan_client: TestClient) -> None:
         conv, msgs = _import_fixture(client)
 
-        # 创建（带发生日期：2025 发生的事，2026 年录入）
+        # 创建（zhan token → actor 派生为 zhan_mcp；带发生日期）
         memory = _create_memory(
-            client,
+            zhan_client,
             title="居住偏好",
             event_time_start="2025-03-14",
-            actor="zhan_mcp",
             actor_model="gpt-5.6-sol",
         )
         assert memory["current_version"] == 1
         assert memory["created_by_actor"] == "zhan_mcp"
         assert memory["created_by_model"] == "gpt-5.6-sol"
 
-        # 加 evidence span（v2）
-        span_resp = client.post(
+        # 加 evidence span（v2，zhan 允许）
+        span_resp = zhan_client.post(
             f"/api/memories/{memory['id']}/spans",
             json={
                 "conversation_id": conv["id"],
                 "start_message_id": msgs[0]["id"],
                 "end_message_id": msgs[1]["id"],
                 "span_type": "evidence",
-                "actor": "zhan_mcp",
             },
         )
         assert span_resp.status_code == 200, span_resp.text
         span = span_resp.json()
 
-        # 加 context span（v3）
+        # 加 context span（v3，owner）
         client.post(
             f"/api/memories/{memory['id']}/spans",
             json={
@@ -62,14 +60,13 @@ class TestMemoryLifecycle:
                 "start_message_id": msgs[2]["id"],
                 "end_message_id": msgs[3]["id"],
                 "span_type": "context",
-                "actor": "owner",
             },
         )
 
         # 编辑正文（v4）
         patch = client.patch(
             f"/api/memories/{memory['id']}",
-            json={"body": "Owner偏好安静、柔和、有空间感的家。", "actor": "owner"},
+            json={"body": "Owner偏好安静、柔和、有空间感的家。"},
         )
         assert patch.status_code == 200
         assert patch.json()["current_version"] == 4
@@ -95,7 +92,7 @@ class TestMemoryLifecycle:
         del_resp = client.request(
             "DELETE",
             f"/api/memories/{memory['id']}/spans/{span['id']}",
-            json={"actor": "owner"},
+            json={},
         )
         assert del_resp.status_code == 200
         detail = client.get(f"/api/memories/{memory['id']}").json()
@@ -105,7 +102,7 @@ class TestMemoryLifecycle:
         # 恢复到 v3（v6 = 追加，不改写历史）
         restore = client.post(
             f"/api/memories/{memory['id']}/restore",
-            json={"version_number": 3, "actor": "owner", "reason": "回滚"},
+            json={"version_number": 3, "reason": "回滚"},
         )
         assert restore.status_code == 200
         detail = client.get(f"/api/memories/{memory['id']}").json()
@@ -114,7 +111,7 @@ class TestMemoryLifecycle:
         assert len(detail["spans"]) == 2  # v3 快照的 spans 被重建
 
         # 软删除 → 列表默认排除
-        client.request("DELETE", f"/api/memories/{memory['id']}", json={"actor": "owner"})
+        client.request("DELETE", f"/api/memories/{memory['id']}", json={})
         listing = client.get("/api/memories").json()
         assert all(m["id"] != memory["id"] for m in listing)
         listing_all = client.get("/api/memories", params={"status": "deleted"}).json()
@@ -154,7 +151,7 @@ class TestMemoryLifecycle:
         resp = client.request(
             "DELETE",
             f"/api/memories/{memory['id']}/spans/{uuid.uuid4()}",
-            json={"actor": "owner"},
+            json={},
         )
         assert resp.status_code == 404
         # 不存在版本

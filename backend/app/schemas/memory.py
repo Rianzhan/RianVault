@@ -14,8 +14,7 @@ class MemoryCreate(BaseModel):
     event_time_end: date | None = None
     tags: list[str] = []
     extra_metadata: dict = {}
-    # T4 起由 token 决定身份；当前显式传入（默认 owner）
-    actor: str = "owner"
+    # actor 由 Bearer token 派生；actor_model 为客户端声明的模型标注（如 gpt-5.6-sol）
     actor_model: str | None = None
     reason: str | None = None
 
@@ -30,7 +29,6 @@ class MemoryUpdate(BaseModel):
     event_time_end: date | None = None
     tags: list[str] | None = None
     extra_metadata: dict | None = None
-    actor: str = "owner"
     actor_model: str | None = None
     reason: str | None = None
 
@@ -63,7 +61,6 @@ class SpanCreate(BaseModel):
     span_type: str  # evidence | context
     note: str | None = None
     sort_order: int = 0
-    actor: str = "owner"
     actor_model: str | None = None
     reason: str | None = None
 
@@ -85,9 +82,8 @@ class SpanOut(BaseModel):
 
 
 class ActorRequest(BaseModel):
-    """restore / delete 这类只带 actor 信息的请求体。"""
+    """restore / delete 这类不带业务字段的请求体（actor 由 token 派生）。"""
 
-    actor: str = "owner"
     actor_model: str | None = None
     reason: str | None = None
 

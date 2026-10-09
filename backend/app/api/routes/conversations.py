@@ -4,12 +4,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.deps import require_any_role
 from app.db.session import get_db
 from app.models import Conversation, Message
 from app.schemas.conversation import ConversationOut
 from app.schemas.message import MessageOut
 
-router = APIRouter(prefix="/api/conversations", tags=["conversations"])
+router = APIRouter(
+    prefix="/api/conversations",
+    tags=["conversations"],
+    dependencies=[Depends(require_any_role)],
+)
 
 
 def _with_count(db: Session, conv: Conversation) -> ConversationOut:

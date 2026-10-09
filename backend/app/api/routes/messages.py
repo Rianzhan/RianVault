@@ -3,11 +3,16 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.deps import require_any_role
 from app.db.session import get_db
 from app.models import Message
 from app.schemas.message import MessageOut
 
-router = APIRouter(prefix="/api/messages", tags=["messages"])
+router = APIRouter(
+    prefix="/api/messages",
+    tags=["messages"],
+    dependencies=[Depends(require_any_role)],
+)
 
 
 @router.get("/{message_id}", response_model=MessageOut)

@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.deps import require_any_role, require_owner
 from app.db.session import get_db
-from app.models import Memory
+from app.models import ApiToken, Memory
 from app.schemas.memory import (
     ActorRequest,
     AuditEventOut,
@@ -32,9 +33,14 @@ def _errors(e: Exception) -> HTTPException:
 
 
 @router.post("", response_model=MemoryOut)
-def create_memory(req: MemoryCreate, db: Session = Depends(get_db)) -> MemoryOut:
+def create_memory(
+    req: MemoryCreate,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_any_role),
+) -> MemoryOut:
+    payload = req.model_dump()
     try:
-        memory = memory_service.create_memory(db, **req.model_dump())
+        memory = memory_service.create_memory(db, actor=actor.role, **payload)
     except (MemoryValidationError, MemoryNotFound) as e:
         raise _errors(e) from e
     return MemoryOut.model_validate(memory)
@@ -48,6 +54,7 @@ def list_memories(
     limit: int = Query(default=50, le=200),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_any_role),
 ) -> list[MemoryOut]:
     stmt = select(Memory).order_by(Memory.updated_at.desc())
     if status:
@@ -64,7 +71,11 @@ def list_memories(
 
 
 @router.get("/{memory_id}", response_model=MemoryDetail)
-def get_memory_detail(memory_id: uuid.UUID, db: Session = Depends(get_db)) -> MemoryDetail:
+def get_memory_detail(
+    memory_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_any_role),
+) -> MemoryDetail:
     try:
         memory = memory_service._get(db, memory_id)
         spans = memory_service.active_spans(db, memory_id)
@@ -82,16 +93,23 @@ def get_memory_detail(memory_id: uuid.UUID, db: Session = Depends(get_db)) -> Me
 
 @router.patch("/{memory_id}", response_model=MemoryOut)
 def update_memory(
-    memory_id: uuid.UUID, req: MemoryUpdate, db: Session = Depends(get_db)
+    memory_id: uuid.UUID,
+    req: MemoryUpdate,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_any_role),
 ) -> MemoryOut:
     payload = req.model_dump()
-    actor = payload.pop("actor")
     actor_model = payload.pop("actor_model")
     reason = payload.pop("reason")
     changes = {k: v for k, v in payload.items() if v is not None or k in ("title", "importance")}
     try:
         memory = memory_service.update_memory(
-            db, memory_id, actor=actor, actor_model=actor_model, reason=reason, **changes
+            db,
+            memory_id,
+            actor=actor.role,
+            actor_model=actor_model,
+            reason=reason,
+            **changes,
         )
     except (MemoryValidationError, MemoryNotFound) as e:
         raise _errors(e) from e
@@ -100,11 +118,18 @@ def update_memory(
 
 @router.delete("/{memory_id}", response_model=MemoryOut)
 def delete_memory(
-    memory_id: uuid.UUID, req: ActorRequest, db: Session = Depends(get_db)
+    memory_id: uuid.UUID,
+    req: ActorRequest,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_owner),
 ) -> MemoryOut:
     try:
         memory = memory_service.soft_delete_memory(
-            db, memory_id, actor=req.actor, actor_model=req.actor_model, reason=req.reason
+            db,
+            memory_id,
+            actor=actor.role,
+            actor_model=req.actor_model,
+            reason=req.reason,
         )
     except MemoryNotFound as e:
         raise _errors(e) from e
@@ -113,14 +138,17 @@ def delete_memory(
 
 @router.post("/{memory_id}/restore", response_model=MemoryOut)
 def restore_memory(
-    memory_id: uuid.UUID, req: RestoreRequest, db: Session = Depends(get_db)
+    memory_id: uuid.UUID,
+    req: RestoreRequest,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_owner),
 ) -> MemoryOut:
     try:
         memory = memory_service.restore_version(
             db,
             memory_id,
             req.version_number,
-            actor=req.actor,
+            actor=actor.role,
             actor_model=req.actor_model,
             reason=req.reason,
         )
@@ -130,14 +158,23 @@ def restore_memory(
 
 
 @router.post("/{memory_id}/spans", response_model=SpanOut)
-def add_span(memory_id: uuid.UUID, req: SpanCreate, db: Session = Depends(get_db)) -> SpanOut:
+def add_span(
+    memory_id: uuid.UUID,
+    req: SpanCreate,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_any_role),
+) -> SpanOut:
     payload = req.model_dump()
-    actor = payload.pop("actor")
     actor_model = payload.pop("actor_model")
     reason = payload.pop("reason")
     try:
         span = span_service.add_span(
-            db, memory_id, actor=actor, actor_model=actor_model, reason=reason, **payload
+            db,
+            memory_id,
+            actor=actor.role,
+            actor_model=actor_model,
+            reason=reason,
+            **payload,
         )
     except (MemoryValidationError, MemoryNotFound, SpanNotFound) as e:
         raise _errors(e) from e
@@ -150,10 +187,15 @@ def remove_span(
     span_id: uuid.UUID,
     req: ActorRequest,
     db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_any_role),
 ) -> SpanOut:
     try:
         span = span_service.remove_span(
-            db, span_id, actor=req.actor, actor_model=req.actor_model, reason=req.reason
+            db,
+            span_id,
+            actor=actor.role,
+            actor_model=req.actor_model,
+            reason=req.reason,
         )
     except (SpanNotFound, MemoryNotFound) as e:
         raise _errors(e) from e
@@ -161,7 +203,11 @@ def remove_span(
 
 
 @router.get("/{memory_id}/versions", response_model=list[VersionOut])
-def list_versions(memory_id: uuid.UUID, db: Session = Depends(get_db)) -> list[VersionOut]:
+def list_versions(
+    memory_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_any_role),
+) -> list[VersionOut]:
     try:
         versions = memory_service.list_versions(db, memory_id)
     except MemoryNotFound as e:
@@ -170,7 +216,11 @@ def list_versions(memory_id: uuid.UUID, db: Session = Depends(get_db)) -> list[V
 
 
 @router.get("/{memory_id}/audit", response_model=list[AuditEventOut])
-def list_audit(memory_id: uuid.UUID, db: Session = Depends(get_db)) -> list[AuditEventOut]:
+def list_audit(
+    memory_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_any_role),
+) -> list[AuditEventOut]:
     if db.get(Memory, memory_id) is None:
         raise HTTPException(status_code=404, detail="memory 不存在")
     events = audit_service.list_for_target(db, "memory", memory_id)
