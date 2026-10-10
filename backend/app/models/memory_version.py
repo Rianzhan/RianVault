@@ -25,9 +25,7 @@ class MemoryVersion(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid.uuid4)
-    memory_id: Mapped[uuid.UUID] = mapped_column(
-        sa.ForeignKey("memories.id"), index=True
-    )
+    memory_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey("memories.id"), index=True)
     version_number: Mapped[int] = mapped_column(sa.Integer)
     snapshot: Mapped[dict] = mapped_column(JSONType)
     edited_by_actor: Mapped[str] = mapped_column(sa.String(50))

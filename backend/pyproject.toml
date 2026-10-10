@@ -39,7 +39,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S105", "S106"]  # pytest 断言与测试用假 token
+"tests/**" = ["S101", "S105", "S106", "S603", "S607"]  # pytest 断言、测试用假 token、只读调用本地 git
 "alembic/**" = ["E501"]
 
 [tool.pytest.ini_options]

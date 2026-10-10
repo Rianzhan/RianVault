@@ -30,3 +30,13 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def redact_db_url(url: str) -> str:
+    """日志里可以打印"连的是哪个库"，但绝不打印凭据。"""
+    if "://" not in url:
+        return url
+    scheme, rest = url.split("://", 1)
+    if "@" in rest:
+        rest = rest.split("@", 1)[1]
+    return f"{scheme}://{rest}"

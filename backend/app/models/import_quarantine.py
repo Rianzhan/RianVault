@@ -17,9 +17,7 @@ class ImportQuarantine(Base):
     __tablename__ = "import_quarantine"
 
     id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid.uuid4)
-    import_id: Mapped[uuid.UUID] = mapped_column(
-        sa.ForeignKey("imports.id"), index=True
-    )
+    import_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey("imports.id"), index=True)
     raw_payload: Mapped[dict] = mapped_column(JSONType)
     reason: Mapped[str] = mapped_column(sa.Text)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)

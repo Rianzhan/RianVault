@@ -22,19 +22,13 @@ class MemorySourceSpan(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         sa.ForeignKey("conversations.id"), index=True
     )
-    start_message_id: Mapped[uuid.UUID] = mapped_column(
-        sa.ForeignKey("messages.id"), index=True
-    )
-    end_message_id: Mapped[uuid.UUID] = mapped_column(
-        sa.ForeignKey("messages.id"), index=True
-    )
+    start_message_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey("messages.id"), index=True)
+    end_message_id: Mapped[uuid.UUID] = mapped_column(sa.ForeignKey("messages.id"), index=True)
     span_type: Mapped[str] = mapped_column(sa.String(10))  # evidence | context
     note: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     sort_order: Mapped[int] = mapped_column(sa.Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
     created_by_actor: Mapped[str] = mapped_column(sa.String(50))
     created_by_model: Mapped[str | None] = mapped_column(sa.String(100), nullable=True)
-    removed_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True
-    )
+    removed_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     removed_by_actor: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
