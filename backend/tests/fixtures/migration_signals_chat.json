@@ -1,0 +1,42 @@
+[
+  {
+    "id": "mig-conv-1",
+    "title": "2026 遗失记忆窗口",
+    "create_time": 1782000000,
+    "update_time": 1782900000,
+    "mapping": {
+      "n0": {"id": "n0", "message": null, "parent": null, "children": ["n1"]},
+      "n1": {"id": "n1", "parent": "n0", "children": ["n2"], "message": {
+        "id": "sig-u1", "author": {"role": "user"}, "create_time": 1782000600,
+        "content": {"content_type": "text", "parts": ["请把这件事加入记忆库"]},
+        "metadata": {}
+      }},
+      "n2": {"id": "n2", "parent": "n1", "children": ["n3"], "message": {
+        "id": "sig-a1", "author": {"role": "assistant"}, "create_time": 1782001200,
+        "content": {"content_type": "text", "parts": ["Model set context updated."]},
+        "metadata": {"model_slug": "gpt-4o"}
+      }},
+      "n3": {"id": "n3", "parent": "n2", "children": ["n4"], "message": {
+        "id": "sig-u2", "author": {"role": "user"}, "create_time": 1782001800,
+        "content": {"content_type": "text", "parts": ["刚才存好了吗"]},
+        "metadata": {}
+      }},
+      "n4": {"id": "n4", "parent": "n3", "children": ["n5"], "message": {
+        "id": "sig-a2", "author": {"role": "assistant"}, "create_time": 1782002400,
+        "content": {"content_type": "text", "parts": ["抱歉，记忆空间已经满了，没有成功存进去。"]},
+        "metadata": {"model_slug": "gpt-4o"}
+      }},
+      "n5": {"id": "n5", "parent": "n4", "children": ["n6"], "message": {
+        "id": "sig-u3", "author": {"role": "user"}, "create_time": 1782003000,
+        "content": {"content_type": "text", "parts": ["那你再试一次，更新记忆"]},
+        "metadata": {}
+      }},
+      "n6": {"id": "n6", "parent": "n5", "children": [], "message": {
+        "id": "sig-a3", "author": {"role": "assistant"}, "create_time": 1782003600,
+        "content": {"content_type": "text", "parts": ["好了，这次真的存进去了。memory full 的问题解决了。"]},
+        "metadata": {"model_slug": "gpt-4o"}
+      }}
+    },
+    "current_node": "n6"
+  }
+]

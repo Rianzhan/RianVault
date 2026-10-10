@@ -34,9 +34,7 @@ class MigrationReview(Base):
     matched_signal: Mapped[str] = mapped_column(sa.String(200))
     verdict: Mapped[str] = mapped_column(sa.String(20), default="unreviewed", index=True)
     reviewed_by: Mapped[str | None] = mapped_column(sa.String(50), nullable=True)
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        sa.DateTime(timezone=True), nullable=True
-    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     # Owner 建记忆时选定的上下文范围（可以比信号消息本身大）
     context_start_message_id: Mapped[uuid.UUID | None] = mapped_column(
         sa.ForeignKey("messages.id"), nullable=True
