@@ -1,5 +1,6 @@
 from app.models.api_token import ApiToken
 from app.models.audit_event import AuditEvent
+from app.models.chunk_index import ChunkIndex
 from app.models.conversation import Conversation
 from app.models.import_ import Import
 from app.models.import_quarantine import ImportQuarantine
@@ -12,6 +13,7 @@ from app.models.migration_review import MigrationReview
 __all__ = [
     "ApiToken",
     "AuditEvent",
+    "ChunkIndex",
     "Conversation",
     "Import",
     "ImportQuarantine",

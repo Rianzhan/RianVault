@@ -31,9 +31,10 @@ node_modules/
 frontend/dist/
 
 # --- ml model caches ---
-# 只忽略仓库根的 models/（sentence-transformers 权重缓存）。
-# 不要写成 models/ —— 那会把 backend/app/models/（ORM 模型包）一起忽略掉。
+# 权重缓存放项目内 .hf-cache/（HF_HOME），系统代理/权限问题更少。
+#k 注意 'models/' 不能写成未锚定形式 —— 那会连带忽略 backend/app/models/。
 .cache/
+.hf-cache/
 /models/
 !backend/app/models/
 

@@ -11,11 +11,18 @@ class Settings(BaseSettings):
     # Dev default: local sqlite file (zero-dependency). Prod: PostgreSQL via compose env.
     database_url: str = "sqlite:///./rianvault-dev.db"
 
-    # Qdrant (needed from T6 on).
+    # Qdrant（只是可重建的语义索引，权威真源始终在 PostgreSQL）。
+    # mode=local 走进程内/本地文件存储（没装 docker 也能跑），mode=server 走 compose 容器。
+    qdrant_mode: str = "local"
+    qdrant_path: str = "./data/qdrant"
     qdrant_url: str = "http://localhost:6333"
+    qdrant_collection: str = "rianvault_chunks"
+    # True 时 payload 只留 chunk_id + conversation_id（其余过滤条件回查 PG）
     qdrant_minimal_payload: bool = False
 
     # Local embedding only. Model name is configuration, never hardcoded in business logic.
+    # provider 决定实现，model 决定权重；两者都只在配置里出现。
+    embedding_provider: str = "sentence-transformers"
     embedding_model: str = "BAAI/bge-m3"
     embedding_device: str = "cpu"
     chunk_max_tokens: int = 600
