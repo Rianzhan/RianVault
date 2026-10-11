@@ -86,6 +86,11 @@ python scripts/restore_from_export.py exports/<export_id>.zip \
 - `.env`、真实聊天导出、数据库文件、`exports/` 永不进 Git（见 .gitignore）。
 - 日志不记正文、查询全文、token。
 - PostgreSQL / Qdrant 在生产环境无公网端口（`tests/test_compose_security.py` 强制）。
+- **只增不删**：临时产物一律用带时间戳的新名字，不清空/覆盖已存在的文件（详见 `docs/dev-log.md`）。
+
+## 开发日志
+
+进度、决策与踩过的坑都在 `docs/dev-log.md`（仓库内，不写到仓库外的任何地方）。
 
 ## 里程碑
 
