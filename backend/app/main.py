@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from app.api.routes import (
     admin_tokens,
     conversations,
+    export,
     health,
     imports,
     memories,
@@ -45,4 +46,5 @@ app.include_router(messages.router)
 app.include_router(memories.router)
 app.include_router(migration_audit.router)
 app.include_router(search.router)
+app.include_router(export.router)
 app.include_router(admin_tokens.router)

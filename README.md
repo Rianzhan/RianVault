@@ -64,6 +64,23 @@ python ../scripts/rebuild_qdrant.py --rebuild          # 换模型后必须全�
 source_platform / source_model / event_time` 五个中性字段，
 任何"正文类"字段都会在写入前被 `build_payload` 拦下（有测试守着）。
 
+## 一键导出与恢复（T7）
+
+```bash
+# 导出（仅 Owner；POST /api/export → GET /api/export/{id}/download）
+curl -X POST -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/export
+curl -OJ -H "Authorization: Bearer $TOKEN" \
+  http://127.0.0.1:8000/api/export/<export_id>/download
+
+# 恢复到全新库（先校验 manifest 与 checksums，不符就中止）
+python scripts/restore_from_export.py exports/<export_id>.zip \
+  --database-url sqlite:///./restored.db
+```
+
+包内 `data/*.jsonl` 是权威数据（按主键原样写回，可重复恢复），
+`markdown/` 是不装程序也能读的全文；**向量不导出**（用 rebuild_qdrant.py 重算）。
+`scripts/e2e_t7_check.py` 会跑完整的导出→下载→CLI 恢复→计数对账。
+
 ## 红线
 
 - `.env`、真实聊天导出、数据库文件、`exports/` 永不进 Git（见 .gitignore）。

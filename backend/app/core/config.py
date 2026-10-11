@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # Mint via: python scripts/create_token.py --role owner --name "..."
 
     import_max_file_mb: int = 512
+
+    # Portable Export 输出目录（.gitignore 已排除 exports/）
+    export_dir: str = "./exports"
+
     log_level: str = "INFO"
 
 
