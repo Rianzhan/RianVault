@@ -1,0 +1,135 @@
+/* 骨架布局：桌面侧栏 + 窄屏顶部导航。窄屏下导航必须仍然可读、可点。 */
+
+* {
+  box-sizing: border-box;
+}
+
+.rv-app {
+  display: grid;
+  grid-template-columns: var(--rv-nav-width) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.rv-nav {
+  border-right: 1px solid var(--rv-line);
+  background: var(--rv-bg-soft);
+  padding: var(--rv-space-4) var(--rv-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rv-space-1);
+}
+
+.rv-nav__brand {
+  font-family: var(--rv-font-serif);
+  font-size: var(--rv-text-lg);
+  color: var(--rv-ink);
+  text-decoration: none;
+  margin-bottom: var(--rv-space-3);
+}
+
+.rv-nav__link {
+  padding: var(--rv-space-2) var(--rv-space-2);
+  border-radius: var(--rv-radius-sm);
+  color: var(--rv-ink-soft);
+  text-decoration: none;
+  font-size: var(--rv-text-sm);
+  transition: background var(--rv-transition), color var(--rv-transition);
+}
+
+.rv-nav__link:hover {
+  background: var(--rv-accent-soft);
+  color: var(--rv-ink);
+}
+
+.rv-nav__link[aria-current="page"] {
+  background: var(--rv-accent-soft);
+  color: var(--rv-accent);
+  font-weight: 600;
+}
+
+.rv-nav__toggle {
+  display: none;
+}
+
+.rv-main {
+  min-width: 0;
+  padding: var(--rv-space-5) var(--rv-space-4);
+}
+
+.rv-main__inner {
+  max-width: var(--rv-reading-width);
+  margin: 0 auto;
+}
+
+.rv-page-title {
+  font-family: var(--rv-font-serif);
+  font-size: var(--rv-text-xl);
+  font-weight: 500;
+  margin: 0 0 var(--rv-space-2);
+}
+
+.rv-page-note {
+  color: var(--rv-ink-soft);
+  font-size: var(--rv-text-sm);
+  margin: 0 0 var(--rv-space-4);
+}
+
+.rv-card {
+  background: var(--rv-surface);
+  border: 1px solid var(--rv-line);
+  border-radius: var(--rv-radius);
+  padding: var(--rv-space-3);
+  box-shadow: var(--rv-shadow);
+}
+
+.rv-skip-link {
+  position: absolute;
+  left: -9999px;
+}
+
+.rv-skip-link:focus {
+  left: var(--rv-space-3);
+  top: var(--rv-space-2);
+  background: var(--rv-surface);
+  padding: var(--rv-space-2);
+  border-radius: var(--rv-radius-sm);
+}
+
+/* 窄屏：侧栏收起，改顶部可切换导航，正文保证可读宽度 */
+@media (max-width: 720px) {
+  .rv-app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rv-nav {
+    border-right: none;
+    border-bottom: 1px solid var(--rv-line);
+    padding: var(--rv-space-2) var(--rv-space-3);
+  }
+
+  .rv-nav__links {
+    display: none;
+    flex-direction: column;
+  }
+
+  .rv-nav__links[data-open="true"] {
+    display: flex;
+  }
+
+  .rv-nav__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--rv-space-2);
+    background: transparent;
+    border: 1px solid var(--rv-line-strong);
+    border-radius: var(--rv-radius-sm);
+    color: var(--rv-ink);
+    font-size: var(--rv-text-sm);
+    padding: var(--rv-space-2);
+    cursor: pointer;
+  }
+
+  .rv-main {
+    padding: var(--rv-space-3) var(--rv-space-3);
+  }
+}
