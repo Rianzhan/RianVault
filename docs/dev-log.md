@@ -52,6 +52,21 @@
 - 验证：pytest 132 绿；`scripts/e2e_t7_check.py` 17 项全过（真实 HTTP 导出/下载 + 真实 CLI 恢复 + 对账）。
 - commit：`0bdc315`。
 
+## 2026-10-11 — T8 前端骨架 + 设计令牌
+
+- `tokens.css` 补齐层次/动效/布局令牌；新增 `layout.css`（桌面侧栏 + 窄屏可折叠导航 + 跳转链接）。
+- `lib/api.ts` 是唯一通信入口：非 2xx 抛 `ApiError`（带 status/detail），网络异常原样抛出；
+  token 只在 sessionStorage；查询走 body 不进 URL（私人查询词不进地址栏/日志）。
+- Layout + PageShell + 9 个页面空壳 + `BrowserRouter` 路由；Settings 页可保存/清除令牌。
+- 验证：`npm run build` 过；`npm run test` 21 项全过（api client 6 + 令牌 15）。
+- commit：`bbc3c70`。
+
+### 前端坑位
+
+- Python 生成 .tsx 时，f-string 会把 JSX 的 `{{ }}` 吃成单括号 → 直接 tsc 报错；生成代码要转义 `{{{{ }}}}`。
+- vitest 默认 `css: false`，`?raw` 导入 CSS 拿到空字符串；想读 CSS 原文就 `node:fs` + `@types/node`。
+- 没装 `@types/node` 时 `import "node:fs"` 会让 `tsc -b` 失败（不只是 vitest 报错）。
+
 ---
 
 ## 坑位（不要再踩）
