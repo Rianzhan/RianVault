@@ -1,4 +1,3 @@
-import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -16,14 +15,11 @@ from app.api.routes import (
     stats,
 )
 from app.core.config import get_settings, redact_db_url
+from app.core.errors import install_exception_handlers
+from app.core.logging_setup import setup_logging
+from app.core.middleware import install_middleware
 
-logger = logging.getLogger("rianvault")
-logger.setLevel(logging.INFO)
-logger.propagate = False  # 不进 uvicorn 的 handler，避免日志重复
-if not logger.handlers:
-    _handler = logging.StreamHandler()
-    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s [rianvault] %(message)s"))
-    logger.addHandler(_handler)
+logger = setup_logging(get_settings().log_level)
 
 
 @asynccontextmanager
@@ -50,3 +46,8 @@ app.include_router(search.router)
 app.include_router(stats.router)
 app.include_router(export.router)
 app.include_router(admin_tokens.router)
+
+# 加固：安全响应头 / 不缓存 / 限流（顺序：先加的后执行，Security 在最外层）
+install_middleware(app)
+# 统一异常处理：不吞异常，5xx 不返回成功字样
+install_exception_handlers(app)

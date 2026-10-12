@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     export_dir: str = "./exports"
 
     log_level: str = "INFO"
+    # 只在排查时打开：开启后未处理异常会打印完整堆栈（可能夹带 SQL 参数 = 正文）
+    debug: bool = False
+
+    # 加固：写操作与检索的每客户端限流（滑动窗口，按分钟计）
+    rate_limit_per_minute: int = 120
+    security_headers: bool = True
 
 
 @lru_cache

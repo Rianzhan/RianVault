@@ -1,3 +1,9 @@
+import os
+
+# 测试环境关闭全局限流：整套用例共用同一 client IP，会累积触发 429。
+# 限流器本身在 tests/test_hardening.py 里有专门测试（用独立 app、真实配额）。
+os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "0")
+
 import uuid
 from collections.abc import Iterator
 from pathlib import Path

@@ -92,9 +92,26 @@ python scripts/restore_from_export.py exports/<export_id>.zip \
 
 进度、决策与踩过的坑都在 `docs/dev-log.md`（仓库内，不写到仓库外的任何地方）。
 
+## 文档
+
+- [RIANVAULT_DESIGN_AUDIT.md](./RIANVAULT_DESIGN_AUDIT.md)：设计与审计（A–H 节 + 附录，含验收标准 G.0）
+- [docs/architecture.md](./docs/architecture.md)：落地后的实际结构与不变式
+- [docs/import-format-v1.md](./docs/import-format-v1.md)：JSONL v1 导入格式
+- [docs/ops-runbook.md](./docs/ops-runbook.md)：启动、备份恢复、重建索引、故障排查
+- [docs/dev-log.md](./docs/dev-log.md)：开发日志（进度、决策、踩过的坑）
+
+## 加固（T10）
+
+- 日志脱敏过滤器：token / Bearer / 连接串密码 / 正文字段一律抹掉（兜底网，真正保证是"不写"）。
+- 统一异常处理：未处理异常 → 500 + `error_id`，**不回吐异常细节**（可能夹带 SQL 参数＝正文），
+  响应体绝不含"成功"字样；默认不打完整堆栈（`DEBUG=true` 才打）。
+- 安全响应头：`nosniff` / `X-Frame-Options: DENY` / `no-referrer`；`/api` 一律 `Cache-Control: no-store`。
+- 限流：写操作与检索按客户端 IP 滑动窗口限流（`RATE_LIMIT_PER_MINUTE`，默认 120/分钟）。
+- 测试：`tests/test_hardening.py`（日志不泄漏、5xx 不装成功、安全头、真实 429、零第三方 embedding）。
+
 ## 里程碑
 
 - M1 地基：导入 ChatGPT export / JSONL v1 → 找回原文 ✅
 - M2 记忆核心：memory + 版本史 + spans + 权限 + 遗失记忆打捞 ✅
-- M3 检索与出口：本地 bge-m3 embedding + Qdrant + Portable Export（进行中）
-- M4 可用：前端页面、加固、文档
+- M3 检索与出口：本地 bge-m3 embedding + Qdrant + Portable Export ✅
+- M4 可用：前端页面、加固、文档 ✅
