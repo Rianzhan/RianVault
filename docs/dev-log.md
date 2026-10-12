@@ -85,6 +85,27 @@
 - vite dev 会生成 `vite.config.ts.timestamp-*.mjs`，`git add -A` 容易把它带进提交，已在 .gitignore 排除。
 - vite dev 默认只监听 localhost，curl `127.0.0.1` 可能连不上，用 `localhost`。
 
+## 2026-10-12 — T10 加固与文档
+
+- `core/logging_setup.py`：日志脱敏过滤器（token / Bearer / 连接串密码 / 正文字段）——
+  兜底网，真正的保证是"根本不写这些东西进日志"。
+- `core/errors.py`：未处理异常 → 500 + `error_id`，不回吐异常细节（SQLAlchemy 异常可能夹带
+  SQL 参数＝正文）；默认不打印完整堆栈，`DEBUG=true` 才打。
+- `core/middleware.py`：安全响应头 + `/api` 一律 `no-store` + 写操作/检索按 IP 滑动窗口限流。
+- `tests/test_hardening.py`（11 项）；文档：`architecture.md` 重写、`ops-runbook.md` 新增、
+  README 补文档索引与加固说明。
+- 验证：后端 pytest 146 绿 + ruff 净；前端 vitest 30 绿 + build 过；真实服务冒烟确认安全头。
+- commit：`2cca33e`。
+
+### 加固相关坑位
+
+- 测试里用默认 `hybrid` 调 `/api/search` 会去加载 bge-m3 权重（本机默认模型名解析不到就**联网**，
+  直接卡几分钟）→ 与检索无关的测试一律用 `mode: "keyword"`。
+- 全局限流会让整套测试累积 429（TestClient 共用一个 client IP）→
+  `tests/conftest.py` 顶部 `os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "0")`；
+  限流器本身用独立 app 单独测（真实配额、真实 429）。
+- 全量跑测试前先确认没有"会触发真实模型加载"的用例混入，否则会出现长时间无输出。
+
 ---
 
 ## 坑位（不要再踩）
