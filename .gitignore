@@ -49,3 +49,6 @@ Thumbs.db
 
 # vite 临时文件（dev server 重新配置时生成）
 vite.config.ts.timestamp-*
+
+# 一键验收脚本产出的临时库
+acceptance-*.db

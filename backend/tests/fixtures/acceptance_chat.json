@@ -1,0 +1,49 @@
+[
+  {
+    "title": "验收用：记忆写入线索",
+    "create_time": 1786780800.0,
+    "update_time": 1786780860.0,
+    "id": "conv-acceptance-001",
+    "default_model_slug": "gpt-4o",
+    "mapping": {
+      "root-0": { "id": "root-0", "message": null, "parent": null, "children": ["n-u1"] },
+      "n-u1": {
+        "id": "n-u1",
+        "message": {
+          "id": "acc-u1",
+          "author": { "role": "user" },
+          "create_time": 1786780800.0,
+          "content": { "content_type": "text", "parts": ["把「咖啡要浅烘」这件事记到记忆库里。"] },
+          "metadata": {}
+        },
+        "parent": "root-0",
+        "children": ["n-a1"]
+      },
+      "n-a1": {
+        "id": "n-a1",
+        "message": {
+          "id": "acc-a1",
+          "author": { "role": "assistant" },
+          "create_time": 1786780830.0,
+          "content": { "content_type": "text", "parts": ["好的，已经记住了：咖啡要浅烘。"] },
+          "metadata": { "model_slug": "gpt-4o" }
+        },
+        "parent": "n-u1",
+        "children": ["n-u2"]
+      },
+      "n-u2": {
+        "id": "n-u2",
+        "message": {
+          "id": "acc-u2",
+          "author": { "role": "user" },
+          "create_time": 1786780860.0,
+          "content": { "content_type": "text", "parts": ["谢谢，下次记得提醒我。"] },
+          "metadata": {}
+        },
+        "parent": "n-a1",
+        "children": []
+      }
+    },
+    "current_node": "n-u2"
+  }
+]
