@@ -46,3 +46,6 @@ Thumbs.db
 
 # build artifacts
 *.tsbuildinfo
+
+# vite 临时文件（dev server 重新配置时生成）
+vite.config.ts.timestamp-*
