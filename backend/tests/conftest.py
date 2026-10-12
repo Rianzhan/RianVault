@@ -84,3 +84,32 @@ def anon_client(db_session: Session) -> Iterator[TestClient]:
 
 def read_fixture(name: str) -> bytes:
     return (FIXTURES / name).read_bytes()
+
+
+@pytest.fixture()
+def seeded_stats(client: TestClient) -> dict:
+    """导入一个会话 + 一条带 span 的记忆，供统计/前端接口测试复用。"""
+    with open("tests/fixtures/chatgpt_export_sample.json", "rb") as f:
+        r = client.post("/api/imports", files={"file": ("c.json", f)})
+    assert r.status_code == 200, r.text
+    conv = client.get("/api/conversations").json()[0]
+    msgs = client.get(f"/api/conversations/{conv['id']}/messages").json()
+    memory = client.post(
+        "/api/memories",
+        json={
+            "title": "统计用记忆",
+            "body": "用于统计接口的样本。",
+            "memory_type": "note",
+            "event_time_start": "2023-11-14",
+        },
+    ).json()
+    client.post(
+        f"/api/memories/{memory['id']}/spans",
+        json={
+            "conversation_id": conv["id"],
+            "start_message_id": msgs[0]["id"],
+            "end_message_id": msgs[-1]["id"],
+            "span_type": "evidence",
+        },
+    )
+    return {"conversation": conv, "messages": msgs, "memory": memory}

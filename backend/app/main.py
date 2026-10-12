@@ -13,6 +13,7 @@ from app.api.routes import (
     messages,
     migration_audit,
     search,
+    stats,
 )
 from app.core.config import get_settings, redact_db_url
 
@@ -46,5 +47,6 @@ app.include_router(messages.router)
 app.include_router(memories.router)
 app.include_router(migration_audit.router)
 app.include_router(search.router)
+app.include_router(stats.router)
 app.include_router(export.router)
 app.include_router(admin_tokens.router)
