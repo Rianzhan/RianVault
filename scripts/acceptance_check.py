@@ -20,7 +20,34 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-import httpx
+VENV_PY = Path(__file__).resolve().parents[1] / ".venv" / "Scripts" / "python.exe"
+
+
+def _relaunch_with_venv_if_needed() -> None:
+    """敲错 Python（用了系统全局的）时自动切到项目 .venv 重跑，免去手动报错。"""
+    if not VENV_PY.exists():
+        return
+    try:
+        if Path(sys.executable).resolve() == VENV_PY.resolve():
+            return
+    except OSError:
+        return
+    print(f"[提示] 当前 Python: {sys.executable}")
+    print(f"[提示] 项目依赖在 .venv 里，自动改用 {VENV_PY} 重新运行…")
+    print()
+    result = subprocess.run([str(VENV_PY), str(Path(__file__).resolve()), *sys.argv[1:]])
+    sys.exit(result.returncode)
+
+
+_relaunch_with_venv_if_needed()
+
+try:
+    import httpx
+except ImportError:
+    # .venv 不存在或损坏时才会走到这里
+    print("当前 Python 没有项目依赖，且未找到可用的 .venv。")
+    print("先在仓库根目录执行：python -m venv .venv && .venv\\Scripts\\pip install -e \"backend[dev]\"")
+    sys.exit(1)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BACKEND = REPO_ROOT / "backend"
