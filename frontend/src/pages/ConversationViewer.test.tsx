@@ -87,8 +87,14 @@ describe("ConversationViewer 选段", () => {
     await user.click(await screen.findByText("测试会话"));
     await user.click(await screen.findByText(/第一条：我们打算搬家。/));
     await user.click(await screen.findByText(/第二条：明白，安静和采光是硬条件。/));
+    // 选段后正文自动带出两条原文
+    await waitFor(() => {
+      expect((screen.getByLabelText("记忆正文") as HTMLTextAreaElement).value).toContain("【原文｜user】第一条：我们打算搬家。");
+    });
 
-    await user.type(screen.getByLabelText("记忆正文"), "Owner要求找安静、采光好的房子");
+    const bodyBox = screen.getByLabelText("记忆正文");
+    await user.clear(bodyBox);
+    await user.type(bodyBox, "Owner要求找安静、采光好的房子");
     const button = await screen.findByText("新建记忆 · 作为证据");
     await user.click(button);
 
@@ -117,7 +123,9 @@ describe("ConversationViewer 选段", () => {
     await user.click(await screen.findByText(/第二条：明白/));
     await user.click(await screen.findByText(/第一条：我们打算搬家。/));
 
-    await user.type(screen.getByLabelText("记忆正文"), "顺序无关");
+    const box = screen.getByLabelText("记忆正文");
+    await user.clear(box);
+    await user.type(box, "顺序无关");
     await user.click(await screen.findByText("新建记忆 · 作为上下文"));
 
     await waitFor(() => {
@@ -131,11 +139,15 @@ describe("ConversationViewer 选段", () => {
     });
   });
 
-  it("正文为空时不允许提交", async () => {
+  it("正文被清空时不允许提交（选段会自动预填原文，清空后才禁用）", async () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(await screen.findByText("测试会话"));
     await user.click(await screen.findByText(/第一条：我们打算搬家。/));
+    await waitFor(() => {
+      expect((screen.getByLabelText("记忆正文") as HTMLTextAreaElement).value).not.toBe("");
+    });
+    await user.clear(screen.getByLabelText("记忆正文"));
     const button = await screen.findByText("新建记忆 · 作为证据");
     expect((button as HTMLButtonElement).disabled).toBe(true);
   });

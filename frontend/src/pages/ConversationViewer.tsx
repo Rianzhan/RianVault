@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import PageShell from "../components/PageShell";
 import { api } from "../lib/api";
@@ -31,6 +31,17 @@ function normalizeRange(picked: string[], messages: Message[]) {
   return { start: sorted[0], end: sorted[sorted.length - 1] };
 }
 
+/** 选段范围内的全部消息（不止端点两条）——正文预填、计数都用它。 */
+function messagesInRange(
+  messages: Message[],
+  startSort: number,
+  endSort: number,
+): Message[] {
+  return messages
+    .filter((m) => m.sort_order >= startSort && m.sort_order <= endSort)
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
 export default function ConversationViewer() {
   const [convId, setConvId] = useState<string | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
@@ -52,6 +63,23 @@ export default function ConversationViewer() {
     () => normalizeRange(picked, messages.data ?? []),
     [picked, messages.data],
   );
+
+  // 选段范围内的全部消息（不止端点两条）——正文预填、计数都用它。
+  const inRange = useMemo(() => {
+    if (!range) return [];
+    return messagesInRange(messages.data ?? [], range.start.sort_order, range.end.sort_order);
+  }, [range, messages.data]);
+
+  // 正文自动带出选中原文（带「原文引用」前缀），用户在其上改写即可，不用复制粘贴
+  useEffect(() => {
+    if (!range) return;
+    const quoted = inRange
+      .map((m) => `【原文｜${m.role}】${m.content_text ?? ""}`)
+      .join("\n\n");
+    setBody(quoted);
+    if (range.start.event_time) setEventDate(range.start.event_time.slice(0, 10));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked]);
 
   const toggle = (id: string) => {
     setPicked((prev) => {
@@ -112,7 +140,7 @@ export default function ConversationViewer() {
   return (
     <PageShell
       title="原文"
-      note="连续阅读原始会话；点两条消息即可框出一段，作为记忆的证据或上下文。"
+      note="点一条消息（变橙 = 选中）作起点，再点另一条作终点：两条之间的整段会被选中，屏幕下方会浮出操作栏，正文已自动带上选中原文，改一改就能存成记忆。"
     >
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 260px) minmax(0, 1fr)", gap: "var(--rv-space-3)" }}>
         <aside className="rv-card" style={{ maxHeight: "70vh", overflow: "auto" }}>
@@ -195,9 +223,22 @@ export default function ConversationViewer() {
       </div>
 
       {range ? (
-        <div className="rv-card" style={{ marginTop: "var(--rv-space-3)" }}>
+        <div
+          className="rv-card"
+          style={{
+            position: "sticky",
+            bottom: "var(--rv-space-2)",
+            zIndex: 10,
+            marginTop: "var(--rv-space-3)",
+            boxShadow: "var(--rv-shadow-raised)",
+            border: "1px solid var(--rv-accent)",
+            maxHeight: "55vh",
+            overflow: "auto",
+          }}
+        >
           <div style={{ fontSize: "var(--rv-text-sm)", color: "var(--rv-ink-soft)" }}>
-            已选 {picked.length} 条（{range.start.sort_order} → {range.end.sort_order}）
+            已选 {inRange.length} 条（第 {range.start.sort_order} → {range.end.sort_order} 条）·
+            正文已自动带出原文，你可以直接在上面改写
           </div>
           <div style={{ display: "grid", gap: "var(--rv-space-2)", marginTop: "var(--rv-space-2)" }}>
             <input
@@ -209,10 +250,10 @@ export default function ConversationViewer() {
             />
             <textarea
               aria-label="记忆正文"
-              placeholder="这条记忆写了什么"
+              placeholder="这条记忆写了什么（选中原文会自动填进来，改写它即可）"
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              rows={3}
+              rows={6}
               style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
             />
             <div style={{ display: "flex", gap: "var(--rv-space-2)", alignItems: "center", flexWrap: "wrap" }}>

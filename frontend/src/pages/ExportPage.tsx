@@ -1,6 +1,6 @@
 import { useState } from "react";
 import PageShell from "../components/PageShell";
-import { api } from "../lib/api";
+import { ApiError, api, downloadFile } from "../lib/api";
 import { useAsync } from "../lib/useAsync";
 
 type ExportItem = { export_id: string; size_bytes: number; created_at: string };
@@ -10,6 +10,7 @@ export default function ExportPage() {
   const exports = useAsync<ExportItem[]>(() => api.get("/export"), []);
   const [created, setCreated] = useState<ExportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   async function create() {
     setError(null);
@@ -18,6 +19,28 @@ export default function ExportPage() {
       exports.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function download(exportId: string) {
+    setError(null);
+    setDownloading(exportId);
+    try {
+      const blob = await downloadFile(`/export/${exportId}/download`);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = exportId;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        setError("下载需要令牌：先去「设置」页保存 token，再回来点下载。");
+      } else {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    } finally {
+      setDownloading(null);
     }
   }
 
@@ -48,7 +71,7 @@ export default function ExportPage() {
           </div>
         ) : null}
         {error ? (
-          <div role="alert" style={{ color: "var(--rv-danger)" }}>
+          <div role="alert" style={{ color: "var(--rv-danger)", marginTop: "var(--rv-space-2)" }}>
             {error}
           </div>
         ) : null}
@@ -67,12 +90,22 @@ export default function ExportPage() {
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {(exports.data ?? []).map((item) => (
             <li key={item.export_id} style={{ marginTop: "var(--rv-space-2)" }}>
-              <a
-                href={`/api/export/${item.export_id}/download`}
-                style={{ color: "var(--rv-accent)" }}
+              <button
+                type="button"
+                onClick={() => download(item.export_id)}
+                disabled={downloading === item.export_id}
+                style={{
+                  border: "none",
+                  background: "none",
+                  padding: 0,
+                  color: "var(--rv-accent)",
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  fontSize: "var(--rv-text-md)",
+                }}
               >
-                {item.export_id}
-              </a>
+                {downloading === item.export_id ? "下载中…" : item.export_id}
+              </button>
               <div style={{ color: "var(--rv-ink-faint)", fontSize: "var(--rv-text-xs)" }}>
                 {Math.round(item.size_bytes / 1024)} KB ·{" "}
                 {new Date(item.created_at).toLocaleString()}
@@ -80,9 +113,6 @@ export default function ExportPage() {
             </li>
           ))}
         </ul>
-        <p className="rv-page-note" style={{ marginTop: "var(--rv-space-2)" }}>
-          下载链接需要带 Authorization 头，浏览器直接点可能 401 —— 用 curl 或在设置里保存 token 后再试。
-        </p>
       </div>
     </PageShell>
   );

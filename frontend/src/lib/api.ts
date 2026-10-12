@@ -83,3 +83,13 @@ export async function upload<T>(path: string, file: File, field = "file"): Promi
   if (!response.ok) throw new ApiError(response.status, raw || "上传失败");
   return (raw ? JSON.parse(raw) : undefined) as T;
 }
+
+/** 下载文件（带 token）：返回 Blob，由调用方触发浏览器保存。 */
+export async function downloadFile(path: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const response = await fetch(`/api${path}`, { headers });
+  if (!response.ok) throw new ApiError(response.status, await response.text());
+  return await response.blob();
+}
