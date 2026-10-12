@@ -116,6 +116,10 @@
   `tests/conftest.py` 顶部 `os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "0")`；
   限流器本身用独立 app 单独测（真实配额、真实 429）。
 - 全量跑测试前先确认没有"会触发真实模型加载"的用例混入，否则会出现长时间无输出。
+- **Windows 双 Python**：系统全局 Python（3.14）没装项目依赖，裸 `python` 会报
+  `No module named uvicorn` / `'alembic' is a package`。所有命令必须走
+  `.venv\Scripts\python.exe`；acceptance_check.py 已加自动切换（检测到非 venv 解释器
+  就重新执行），手册命令全部改写为 venv 路径。
 
 ---
 
