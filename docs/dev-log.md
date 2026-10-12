@@ -61,11 +61,29 @@
 - 验证：`npm run build` 过；`npm run test` 21 项全过（api client 6 + 令牌 15）。
 - commit：`bbc3c70`。
 
+## 2026-10-12 — T9 前端核心页面
+
+- 后端补 `GET /api/stats`（首页概览：会话/消息/已索引/记忆/片段/待审阅线索 + 当前身份；
+  只给计数、排除软删除；3 项测试）。
+- 前端：`useAsync`（统一加载/报错/重试，错误必显示）、Conversation Viewer（点两条消息框出选段
+  → 建记忆并绑 evidence/context，或加入已有记忆）、Memory Library、Memory Detail/Genesis
+  （双时间 + 来源片段跳回原文 + 版本史可回滚 + 审计史 + 编辑 + 软删除）、Search（POST 查询）、
+  Import（上传与对账、警告）、Export（生成与下载）、Migration Audit（扫描 + 七种人工判定 + 整理成记忆）。
+- 验证：后端 pytest 135 绿 + ruff 净；前端 vitest 30 绿、`npm run build` 过；
+  vite dev 代理真实后端冒烟（无 token 401、带 token 200）。
+- commit：`71f34f6`、`ec2c576`。
+
 ### 前端坑位
 
 - Python 生成 .tsx 时，f-string 会把 JSX 的 `{{ }}` 吃成单括号 → 直接 tsc 报错；生成代码要转义 `{{{{ }}}}`。
 - vitest 默认 `css: false`，`?raw` 导入 CSS 拿到空字符串；想读 CSS 原文就 `node:fs` + `@types/node`。
 - 没装 `@types/node` 时 `import "node:fs"` 会让 `tsc -b` 失败（不只是 vitest 报错）。
+- vitest 不开 `globals` 时 RTL **不会自动 cleanup**，多个组件测试会互相污染 DOM（findByText 报
+  "found multiple elements"）→ 每个测试文件都要 `afterEach(cleanup)`。
+- `toBeDisabled()` 等是 jest-dom 匹配器，没装就别用；用 `(el as HTMLButtonElement).disabled`。
+- `getByText(/正则/)` 会同时命中父元素与子元素 → 用 `getAllByText(...).length > 0`。
+- vite dev 会生成 `vite.config.ts.timestamp-*.mjs`，`git add -A` 容易把它带进提交，已在 .gitignore 排除。
+- vite dev 默认只监听 localhost，curl `127.0.0.1` 可能连不上，用 `localhost`。
 
 ---
 
