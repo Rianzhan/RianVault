@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import logging
 import sys
 from pathlib import Path
@@ -26,6 +27,21 @@ from app.services import index_service  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger("rebuild")
+
+# 进程退出时尽量释放 Qdrant 本地模式的目录锁，避免留下孤儿锁。
+# 强杀（taskkill /F）仍可能残留，但正常跑完/中断（Ctrl+C）都会走这里。
+_client_ref: list = []
+
+
+def _cleanup() -> None:
+    for client in _client_ref:
+        try:
+            client.close()
+        except Exception:
+            pass
+
+
+atexit.register(_cleanup)
 
 
 def report(db) -> None:
@@ -63,6 +79,9 @@ def main() -> None:
         report(db)
         if args.check:
             return
+        # 把客户端挂到全局引用上，进程退出时 atexit 主动 close 释放目录锁
+        client = index_service.get_qdrant()
+        _client_ref.append(client)
         stats = index_service.index_messages(db, rebuild=args.rebuild, limit_messages=args.limit)
         print(
             f"done: messages={stats['messages']} chunks={stats['chunks']} "

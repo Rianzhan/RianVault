@@ -54,8 +54,12 @@ class SentenceTransformerProvider:
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
+        settings = get_settings()
         vectors = self._load().encode(
-            texts, batch_size=8, normalize_embeddings=True, show_progress_bar=False
+            texts,
+            batch_size=settings.embedding_batch_size,
+            normalize_embeddings=True,
+            show_progress_bar=False,
         )
         return [list(map(float, v)) for v in vectors]
 

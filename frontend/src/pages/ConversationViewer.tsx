@@ -44,6 +44,7 @@ function messagesInRange(
 
 export default function ConversationViewer() {
   const [convId, setConvId] = useState<string | null>(null);
+  const [convQuery, setConvQuery] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -147,9 +148,30 @@ export default function ConversationViewer() {
           <div style={{ color: "var(--rv-ink-soft)", fontSize: "var(--rv-text-sm)" }}>
             会话（{conversations.data?.length ?? 0}）
           </div>
+          <input
+            aria-label="搜索会话"
+            placeholder="搜索会话名 / 标题…"
+            value={convQuery}
+            onChange={(e) => setConvQuery(e.target.value)}
+            style={{
+              width: "100%",
+              marginTop: "var(--rv-space-2)",
+              padding: "var(--rv-space-2)",
+              border: "1px solid var(--rv-line-strong)",
+              borderRadius: "var(--rv-radius-sm)",
+              fontSize: "var(--rv-text-sm)",
+            }}
+          />
           {conversations.error ? <div style={{ color: "var(--rv-danger)" }}>{conversations.error}</div> : null}
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {(conversations.data ?? []).map((c) => (
+            {(conversations.data ?? [])
+              .filter((c) => {
+                const q = convQuery.trim().toLowerCase();
+                if (!q) return true;
+                const title = (c.title ?? "").toLowerCase();
+                return title.includes(q) || c.source_platform.toLowerCase().includes(q);
+              })
+              .map((c) => (
               <li key={c.id} style={{ marginTop: "var(--rv-space-2)" }}>
                 <button
                   type="button"

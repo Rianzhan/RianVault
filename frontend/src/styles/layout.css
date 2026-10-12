@@ -7,7 +7,9 @@
 .rv-app {
   display: grid;
   grid-template-columns: var(--rv-nav-width) minmax(0, 1fr);
-  min-height: 100vh;
+  /* 侧栏与正文各自独立滚动：左边导航固定可见，右边正文独立下滑 */
+  height: 100vh;
+  overflow: hidden;
 }
 
 .rv-nav {
@@ -16,33 +18,41 @@
   padding: var(--rv-space-4) var(--rv-space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--rv-space-1);
+  gap: var(--rv-space-2);
+  /* 侧栏自己滚动，导航再多也能看到 */
+  overflow-y: auto;
 }
 
 .rv-nav__brand {
   font-family: var(--rv-font-serif);
-  font-size: var(--rv-text-lg);
+  font-size: var(--rv-text-xl);
   color: var(--rv-ink);
   text-decoration: none;
   margin-bottom: var(--rv-space-3);
 }
 
 .rv-nav__link {
-  padding: var(--rv-space-2) var(--rv-space-2);
-  border-radius: var(--rv-radius-sm);
-  color: var(--rv-ink-soft);
+  display: block;
+  padding: var(--rv-space-3) var(--rv-space-3);
+  border-radius: var(--rv-radius);
+  border: 1px solid var(--rv-line);
+  background: var(--rv-surface);
+  color: var(--rv-ink);
   text-decoration: none;
-  font-size: var(--rv-text-sm);
-  transition: background var(--rv-transition), color var(--rv-transition);
+  font-size: var(--rv-text-lg);
+  box-shadow: var(--rv-shadow);
+  transition: background var(--rv-transition), border-color var(--rv-transition);
 }
 
 .rv-nav__link:hover {
   background: var(--rv-accent-soft);
+  border-color: var(--rv-accent);
   color: var(--rv-ink);
 }
 
 .rv-nav__link[aria-current="page"] {
   background: var(--rv-accent-soft);
+  border-color: var(--rv-accent);
   color: var(--rv-accent);
   font-weight: 600;
 }
@@ -54,6 +64,8 @@
 .rv-main {
   min-width: 0;
   padding: var(--rv-space-5) var(--rv-space-4);
+  /* 正文独立滚动 */
+  overflow-y: auto;
 }
 
 .rv-main__inner {
@@ -99,12 +111,14 @@
 @media (max-width: 720px) {
   .rv-app {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .rv-nav {
     border-right: none;
     border-bottom: 1px solid var(--rv-line);
     padding: var(--rv-space-2) var(--rv-space-3);
+    overflow: visible;
   }
 
   .rv-nav__links {

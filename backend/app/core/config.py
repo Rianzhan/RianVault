@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     embedding_provider: str = "sentence-transformers"
     embedding_model: str = "BAAI/bge-m3"
     embedding_device: str = "cpu"
+    # CPU 上批量越大越划算（bge-m3 很重，batch 8 会慢一倍以上）
+    embedding_batch_size: int = 32
     chunk_max_tokens: int = 600
 
     # Auth tokens live in the api_tokens table (single source of truth).

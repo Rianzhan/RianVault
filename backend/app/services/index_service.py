@@ -80,12 +80,30 @@ def _assert_payload_safe(payload: dict[str, Any]) -> None:
 
 
 def get_qdrant():
-    """本地模式 = 进程内/文件存储（无需 docker）；server 模式 = compose 容器。"""
+    """本地模式 = 进程内/文件存储（无需 docker）；server 模式 = compose 容器。
+
+    本地模式的锁坑：qdrant-client 用 portalocker 锁住存储目录，进程被强杀时
+    锁文件（.lock）会残留，导致下一个实例报
+    "already accessed by another instance"。这通常意味着真有一个实例还活着；
+    但开发/脚本场景下，残留锁比活进程更常见。这里做的只是**把错误讲清楚**，
+    不擅自删锁（删锁可能损坏正在运行的实例）。
+    """
     from qdrant_client import QdrantClient
 
     settings = get_settings()
     if settings.qdrant_mode == "local":
-        return QdrantClient(path=settings.qdrant_path)
+        try:
+            return QdrantClient(path=settings.qdrant_path)
+        except RuntimeError as e:
+            if "already accessed" in str(e):
+                raise RuntimeError(
+                    f"Qdrant 存储目录被占用：{settings.qdrant_path}\n"
+                    "通常是另一个 RianVault 进程（后端服务或后台建索引任务）还在跑。\n"
+                    "先停掉那个进程（或等它跑完），再重试。\n"
+                    "不要手删 .lock —— 那可能损坏正在写入的实例；"
+                    "干净的做法是停掉占用它的进程。"
+                ) from e
+            raise
     return QdrantClient(url=settings.qdrant_url)
 
 
@@ -206,6 +224,10 @@ def index_messages(
         client.upsert(collection_name=collection, points=points)
         db.commit()
         stats["upserted"] += len(points)
+        # 建索引可能跑很久（CPU 上 bge-m3 每秒只能处理个位数量级的消息），
+        # 定期报进度，避免看起来像卡死。只报数量，不碰正文。
+        if stats["upserted"] % (batch_size * 10) < batch_size:
+            logger.info("index progress: %s chunks written", stats["upserted"])
 
     seen_messages: set[uuid.UUID] = set()
     for item in _iter_chunks(pairs, settings.chunk_max_tokens):
