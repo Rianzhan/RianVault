@@ -97,6 +97,17 @@
 - 验证：后端 pytest 146 绿 + ruff 净；前端 vitest 30 绿 + build 过；真实服务冒烟确认安全头。
 - commit：`2cca33e`。
 
+## 2026-10-12 — 一键验收脚本（acceptance_check.py）
+
+- Owner反馈"不知道文件在哪、不知道怎么验收"，于是加了 `scripts/acceptance_check.py`：
+  自建全新库（带时间戳）→ 起服务 → 造 token → 逐项跑 G.0 → 打印 PASS/FAIL → 关服务。
+- 30/30 通过（约 46 秒，含真机 bge-m3 语义检索）；`--skip-semantic` 可跳过权重加载。
+- 新增 `backend/tests/fixtures/acceptance_chat.json`：2026-08 的「已经记住了」样本，
+  让审计窗口 2026-07-01~10-31 真能扫出候选（原 fixture 是 2023 年，扫不到）。
+- 另外写了 `backend/.env`（不进 Git）：本地 SQLite + Qdrant 本地模式 + bge-m3 本地权重路径，
+  这样手工起服务不用再敲一串环境变量。
+- commit：`b511ea6`。
+
 ### 加固相关坑位
 
 - 测试里用默认 `hybrid` 调 `/api/search` 会去加载 bge-m3 权重（本机默认模型名解析不到就**联网**，
