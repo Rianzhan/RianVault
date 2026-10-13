@@ -119,6 +119,18 @@
   这条链路必须当场提示，否则必被当成 bug。
 - commit：`45f01a6`。
 
+## 2026-10-13 — Owner第二批反馈
+
+- 导航卡片化 + 大字号 + 侧栏/正文独立滚动（height:100vh + overflow）；原文页加搜会话名。
+- 检索加筛选：模型、角色、起止日期区间（后端补 source_model，前端接齐 date_from/date_to/role/model）。
+- Qdrant 本地模式锁残留：`get_qdrant` 讲清「目录被占用」并提示别手删 .lock；
+  `rebuild_qdrant.py` atexit 主动 close；embedding batch 可配置 + 进度日志。
+- **待Owner拍板的设计决策**（本轮先不动，见回复）：
+  ① 记忆要不要加「摘要」字段（evidence/context 之上再加一层 summary）；
+  ② span 是否允许增删/编辑（现在只读，靠版本史溯源）；
+  ③ 筛选放检索还是原文还是都放。
+- commit：`0d77fbc`、`538f06a`。
+
 ### 加固相关坑位
 
 - 测试里用默认 `hybrid` 调 `/api/search` 会去加载 bge-m3 权重（本机默认模型名解析不到就**联网**，
