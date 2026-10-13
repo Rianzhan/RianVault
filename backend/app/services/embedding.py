@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Protocol
 
 from app.core.config import get_settings
@@ -81,6 +82,17 @@ PROVIDERS = {
     "sentence-transformers": SentenceTransformerProvider,
 }
 
+# 单例缓存：provider 实例上持有已加载的模型，每次 new 都会重新加载权重。
+# 实测代价：本地缓存下每次约 5 秒 —— 检索慢、建索引慢的真凶就是这个。
+_provider_cache: dict[tuple, EmbeddingProvider] = {}
+_provider_lock = threading.Lock()
+
+
+def reset_embedding_provider() -> None:
+    """测试/换配置时清空缓存（正常运行时不需要）。"""
+    with _provider_lock:
+        _provider_cache.clear()
+
 
 def get_embedding_provider(
     name: str | None = None,
@@ -89,8 +101,15 @@ def get_embedding_provider(
     device: str | None = None,
 ) -> EmbeddingProvider:
     settings = get_settings()
-    key = name or settings.embedding_provider
-    if key not in PROVIDERS:
-        raise ValueError(f"未知的 embedding provider: {key}（可用：{sorted(PROVIDERS)}）")
-    cls = PROVIDERS[key]
-    return cls(model_name=model_name, device=device)
+    provider_key = name or settings.embedding_provider
+    if provider_key not in PROVIDERS:
+        raise ValueError(f"未知的 embedding provider: {provider_key}（可用：{sorted(PROVIDERS)}）")
+    cls = PROVIDERS[provider_key]
+    # 同一个 provider 但模型/设备不同 → 视为不同实例（模型权重不同）
+    cache_key = (provider_key, model_name, device)
+    with _provider_lock:
+        cached = _provider_cache.get(cache_key)
+        if cached is None:
+            cached = cls(model_name=model_name, device=device)
+            _provider_cache[cache_key] = cached
+        return cached

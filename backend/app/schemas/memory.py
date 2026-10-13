@@ -65,6 +65,15 @@ class SpanCreate(BaseModel):
     reason: str | None = None
 
 
+class MemoryPurgeResult(BaseModel):
+    """回收站彻底删除的结果（不回吐正文）。"""
+
+    id: uuid.UUID
+    purged: bool = True
+    versions_removed: int = 0
+    spans_removed: int = 0
+
+
 class SpanUpdate(BaseModel):
     """改来源范围：只带要改的字段；不改的留 None。
 

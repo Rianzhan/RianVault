@@ -42,3 +42,10 @@ def list_for_target(db: Session, target_type: str, target_id: uuid.UUID) -> list
             .order_by(AuditEvent.created_at)
         ).all()
     )
+
+
+def list_recent(db: Session, limit: int = 100) -> list[AuditEvent]:
+    """最近事件（管理员视角）。默认 100 条，上限 500。"""
+    return list(
+        db.scalars(select(AuditEvent).order_by(AuditEvent.created_at.desc()).limit(limit)).all()
+    )

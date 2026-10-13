@@ -52,3 +52,7 @@ vite.config.ts.timestamp-*
 
 # 一键验收脚本产出的临时库
 acceptance-*.db
+
+# 验证脚本产出的临时库
+smoke-*.db
+*-smoke.db

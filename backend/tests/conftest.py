@@ -19,6 +19,7 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.models import ApiToken
+from app.services.index_service import reset_qdrant_client
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -44,6 +45,9 @@ def _seed_tokens(db: Session) -> None:
 
 @pytest.fixture()
 def db_session() -> Iterator[Session]:
+    # 每个用例都是全新的空库，进程内缓存的 Qdrant 单例必须一起重置，
+    # 否则会把上一个用例的集合（甚至开发库的集合）带进新用例。
+    reset_qdrant_client()
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},

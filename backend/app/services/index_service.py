@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import uuid
 from collections.abc import Iterator
 from datetime import datetime
@@ -79,15 +80,23 @@ def _assert_payload_safe(payload: dict[str, Any]) -> None:
         raise RuntimeError(f"payload 出现白名单外字段：{sorted(extra)}")
 
 
-def get_qdrant():
-    """本地模式 = 进程内/文件存储（无需 docker）；server 模式 = compose 容器。
+_client = None
+_client_lock = threading.Lock()
 
-    本地模式的锁坑：qdrant-client 用 portalocker 锁住存储目录，进程被强杀时
-    锁文件（.lock）会残留，导致下一个实例报
-    "already accessed by another instance"。这通常意味着真有一个实例还活着；
-    但开发/脚本场景下，残留锁比活进程更常见。这里做的只是**把错误讲清楚**，
-    不擅自删锁（删锁可能损坏正在运行的实例）。
-    """
+
+def reset_qdrant_client() -> None:
+    """测试/换配置时把单例清掉（正常运行时不需要调用）。"""
+    global _client
+    with _client_lock:
+        if _client is not None:
+            try:
+                _client.close()
+            except (OSError, RuntimeError) as e:
+                logger.debug("关闭 Qdrant 客户端失败（忽略）：%s", e)
+        _client = None
+
+
+def _create_client():
     from qdrant_client import QdrantClient
 
     settings = get_settings()
@@ -105,6 +114,24 @@ def get_qdrant():
                 ) from e
             raise
     return QdrantClient(url=settings.qdrant_url)
+
+
+def get_qdrant():
+    """获取 Qdrant 客户端（**进程内单例**）。
+
+    为什么必须是单例（踩过的坑）：
+    本地模式用 portalocker 锁住存储目录，**同一进程内开第二个客户端也会冲突**
+    （实测会抛 "already accessed by another instance"）。
+    后果很实际：两个并发的语义检索 → 第二个 503；后台建索引 + 前端检索 → 503。
+    所以这里缓存一个客户端，全进程共用；后台索引线程与检索请求因此能共存。
+    """
+    global _client
+    if _client is not None:
+        return _client
+    with _client_lock:
+        if _client is None:
+            _client = _create_client()
+        return _client
 
 
 def ensure_collection(client, dimension: int, *, recreate: bool = False) -> str:

@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # CPU 上批量越大越划算（bge-m3 很重，batch 8 会慢一倍以上）
     embedding_batch_size: int = 32
     chunk_max_tokens: int = 600
+    # 启动即预热：bge-m3 冷启动加载约 60 秒，不预热的话第一次检索要干等
+    warmup_embedding_on_startup: bool = True
+    # 导入完成后自动在后台补齐语义索引（人不用再手动点）
+    auto_index_after_import: bool = True
 
     # Auth tokens live in the api_tokens table (single source of truth).
     # Mint via: python scripts/create_token.py --role owner --name "..."

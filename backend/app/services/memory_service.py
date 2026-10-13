@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.models import Memory, MemorySourceSpan, MemoryVersion
@@ -276,6 +276,53 @@ def soft_delete_memory(
     )
     db.commit()
     return memory
+
+
+def purge_memory(
+    db: Session,
+    memory_id: uuid.UUID,
+    *,
+    actor: str,
+    actor_model: str | None = None,
+    reason: str | None = None,
+) -> dict:
+    """真正删除（回收站清空）：memory + 版本 + 来源片段一起物理删除。
+
+    仅 Owner。审计事件仍会留下一条 memory_purged（正文不进日志），
+    这样"这条记忆曾经存在过、被谁删的"这件事本身还是可追溯的。
+    """
+    memory = _get(db, memory_id)
+    memory_id = memory.id
+    versions_removed = (
+        db.scalar(select(func.count(MemoryVersion.id)).where(MemoryVersion.memory_id == memory_id))
+        or 0
+    )
+    spans_removed = (
+        db.scalar(
+            select(func.count(MemorySourceSpan.id)).where(MemorySourceSpan.memory_id == memory_id)
+        )
+        or 0
+    )
+    db.execute(delete(MemoryVersion).where(MemoryVersion.memory_id == memory_id))
+    db.execute(delete(MemorySourceSpan).where(MemorySourceSpan.memory_id == memory_id))
+    db.delete(memory)
+    db.flush()
+    audit_service.record(
+        db,
+        event_type="memory_purged",
+        actor=actor,
+        actor_model=actor_model,
+        target_type="memory",
+        target_id=memory_id,
+        detail={"reason": reason, "versions_removed": versions_removed},
+    )
+    db.commit()
+    return {
+        "id": memory_id,
+        "purged": True,
+        "versions_removed": versions_removed,
+        "spans_removed": spans_removed,
+    }
 
 
 def restore_version(

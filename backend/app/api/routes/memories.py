@@ -13,6 +13,7 @@ from app.schemas.memory import (
     MemoryCreate,
     MemoryDetail,
     MemoryOut,
+    MemoryPurgeResult,
     MemoryUpdate,
     RestoreRequest,
     SpanCreate,
@@ -180,6 +181,27 @@ def add_span(
     except (MemoryValidationError, MemoryNotFound, SpanNotFound) as e:
         raise _errors(e) from e
     return SpanOut.model_validate(span)
+
+
+@router.delete("/{memory_id}/purge", response_model=MemoryPurgeResult)
+def purge_memory(
+    memory_id: uuid.UUID,
+    req: ActorRequest | None = None,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_owner),
+) -> MemoryPurgeResult:
+    """回收站里的彻底删除（Owner only，物理删除 memory/版本/来源片段）。"""
+    try:
+        result = memory_service.purge_memory(
+            db,
+            memory_id,
+            actor=actor.role,
+            actor_model=req.actor_model if req else None,
+            reason=req.reason if req else None,
+        )
+    except memory_service.MemoryNotFound as e:
+        raise _errors(e) from e
+    return MemoryPurgeResult.model_validate(result)
 
 
 @router.patch("/{memory_id}/spans/{span_id}", response_model=SpanOut)

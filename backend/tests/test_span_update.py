@@ -160,6 +160,23 @@ def test_update_span_requires_token(anon_client, with_span) -> None:
     assert r.status_code == 401
 
 
+def test_purge_removes_memory_completely(client, with_span) -> None:
+    """回收站里的彻底删除：物理删除，且留下审计痕迹。"""
+    mem_id = with_span["memory"]["id"]
+    r = client.request("DELETE", f"/api/memories/{mem_id}/purge", json={"reason": "确认不要了"})
+    assert r.status_code == 200, r.text
+    assert r.json()["purged"] is True
+    assert client.get(f"/api/memories/{mem_id}").status_code == 404
+    # 审计仍记得"它被删过"（在 global audit 流里）
+    events = client.get("/api/audit/").json()
+    assert any(e["event_type"] == "memory_purged" for e in events)
+
+
+def test_purge_requires_owner(zhan_client, with_span) -> None:
+    r = zhan_client.request("DELETE", f"/api/memories/{with_span['memory']['id']}/purge", json={})
+    assert r.status_code == 403, r.text
+
+
 def test_zhan_can_update_span(zhan_client, with_span) -> None:
     """权限矩阵：zhan 可以写来源（含改范围），不能删/恢复。"""
     msgs = with_span["messages"]

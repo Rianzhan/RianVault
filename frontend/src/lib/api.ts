@@ -67,7 +67,9 @@ export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body?: unknown) => request<T>("POST", path, body ?? {}),
   patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
-  del: <T>(path: string) => request<T>("DELETE", path),
+  // 后端这几个写操作要求 JSON body（actor/reason 由 token 派生，但 body 得存在），
+  // 所以默认发 {}，否则 DELETE 不带 body 会被判 422。
+  del: <T>(path: string, body: unknown = {}) => request<T>("DELETE", path, body),
 };
 
 /** 上传文件走 multipart，不经过 JSON 序列化（导入导出用）。 */
