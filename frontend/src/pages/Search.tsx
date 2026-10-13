@@ -29,6 +29,10 @@ export default function Search() {
   const [error, setError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
   const [buildNote, setBuildNote] = useState<string | null>(null);
+  const [model, setModel] = useState("");
+  const [role, setRole] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // 语义检索只看得到"已索引"的消息——新导入还没建索引时，必须提示，否则像灵异事件
   const stats = useAsync<Stats>(() => api.get("/stats"), []);
@@ -57,7 +61,13 @@ export default function Search() {
     setError(null);
     try {
       const body: Record<string, unknown> = { query: query.trim(), mode, limit: 30 };
-      if (platform) body.filters = { source_platform: platform };
+      const filters: Record<string, unknown> = {};
+      if (platform) filters.source_platform = platform;
+      if (model) filters.source_model = model;
+      if (role) filters.role = role;
+      if (dateFrom) filters.date_from = dateFrom;
+      if (dateTo) filters.date_to = dateTo;
+      if (Object.keys(filters).length) body.filters = filters;
       setResults(await api.post<SearchResponse>("/search", body));
     } catch (e) {
       setResults(null);
@@ -137,6 +147,39 @@ export default function Search() {
             placeholder="平台（可空）"
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
+            style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
+          />
+          <input
+            aria-label="模型过滤"
+            placeholder="模型（如 gpt-4o，可空）"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
+          />
+          <select
+            aria-label="角色过滤"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
+          >
+            <option value="">全部角色</option>
+            <option value="user">user</option>
+            <option value="assistant">assistant</option>
+            <option value="system">system</option>
+          </select>
+          <input
+            aria-label="起始日期"
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
+          />
+          <span style={{ color: "var(--rv-ink-faint)" }}>→</span>
+          <input
+            aria-label="结束日期"
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
             style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
           />
           <button

@@ -61,6 +61,7 @@ class Filters:
     date_from: date | None = None
     date_to: date | None = None
     role: str | None = None
+    source_model: str | None = None
 
 
 def _apply_filters(stmt: Select, filters: Filters) -> Select:
@@ -70,6 +71,8 @@ def _apply_filters(stmt: Select, filters: Filters) -> Select:
         stmt = stmt.where(Message.conversation_id == filters.conversation_id)
     if filters.role:
         stmt = stmt.where(Message.role == filters.role)
+    if filters.source_model:
+        stmt = stmt.where(Message.source_model == filters.source_model)
     if filters.date_from:
         stmt = stmt.where(
             Message.event_time >= datetime.combine(filters.date_from, datetime.min.time())

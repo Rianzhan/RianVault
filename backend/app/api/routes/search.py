@@ -27,6 +27,7 @@ class SearchFilters(BaseModel):
     date_from: date | None = None
     date_to: date | None = None
     role: str | None = None
+    source_model: str | None = None
 
 
 class SearchRequest(BaseModel):
@@ -63,6 +64,7 @@ def search(
             date_from=req.filters.date_from,
             date_to=req.filters.date_to,
             role=req.filters.role,
+            source_model=req.filters.source_model,
         )
     try:
         hits = search_service.search(db, req.query, mode=req.mode, limit=req.limit, filters=filters)
