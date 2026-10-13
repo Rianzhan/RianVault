@@ -45,6 +45,10 @@ function messagesInRange(
 export default function ConversationViewer() {
   const [convId, setConvId] = useState<string | null>(null);
   const [convQuery, setConvQuery] = useState("");
+  const [msgModel, setMsgModel] = useState("");
+  const [msgRole, setMsgRole] = useState("");
+  const [msgDateFrom, setMsgDateFrom] = useState("");
+  const [msgDateTo, setMsgDateTo] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -64,6 +68,19 @@ export default function ConversationViewer() {
     () => normalizeRange(picked, messages.data ?? []),
     [picked, messages.data],
   );
+
+  // 原文页的消息筛选（模型 / 角色 / 日期区间）：单会话内前端过滤即可
+  const filteredMessages = useMemo(() => {
+    return (messages.data ?? []).filter((m) => {
+      if (msgModel && !(m.source_model ?? "").toLowerCase().includes(msgModel.toLowerCase()))
+        return false;
+      if (msgRole && m.role !== msgRole) return false;
+      const day = m.event_time ? m.event_time.slice(0, 10) : "";
+      if (msgDateFrom && day && day < msgDateFrom) return false;
+      if (msgDateTo && day && day > msgDateTo) return false;
+      return true;
+    });
+  }, [messages.data, msgModel, msgRole, msgDateFrom, msgDateTo]);
 
   // 选段范围内的全部消息（不止端点两条）——正文预填、计数都用它。
   const inRange = useMemo(() => {
@@ -202,6 +219,55 @@ export default function ConversationViewer() {
         </aside>
 
         <section>
+          {convId ? (
+            <div
+              className="rv-card"
+              style={{
+                marginBottom: "var(--rv-space-3)",
+                display: "flex",
+                gap: "var(--rv-space-2)",
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <input
+                aria-label="按模型筛选"
+                placeholder="模型（如 gpt-4o，可空）"
+                value={msgModel}
+                onChange={(e) => setMsgModel(e.target.value)}
+                style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)", fontSize: "var(--rv-text-sm)" }}
+              />
+              <select
+                aria-label="按角色筛选"
+                value={msgRole}
+                onChange={(e) => setMsgRole(e.target.value)}
+                style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)", fontSize: "var(--rv-text-sm)" }}
+              >
+                <option value="">全部角色</option>
+                <option value="user">user</option>
+                <option value="assistant">assistant</option>
+                <option value="system">system</option>
+              </select>
+              <input
+                aria-label="起始日期"
+                type="date"
+                value={msgDateFrom}
+                onChange={(e) => setMsgDateFrom(e.target.value)}
+                style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)", fontSize: "var(--rv-text-sm)" }}
+              />
+              <span style={{ color: "var(--rv-ink-faint)" }}>→</span>
+              <input
+                aria-label="结束日期"
+                type="date"
+                value={msgDateTo}
+                onChange={(e) => setMsgDateTo(e.target.value)}
+                style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)", fontSize: "var(--rv-text-sm)" }}
+              />
+              <span style={{ color: "var(--rv-ink-soft)", fontSize: "var(--rv-text-sm)" }}>
+                筛选出 {filteredMessages.length} / {messages.data?.length ?? 0} 条
+              </span>
+            </div>
+          ) : null}
           {!convId ? (
             <div className="rv-card">左边选一个会话开始阅读。</div>
           ) : messages.loading ? (
@@ -212,7 +278,7 @@ export default function ConversationViewer() {
             </div>
           ) : (
             <div>
-              {(messages.data ?? []).map((m) => {
+              {filteredMessages.map((m) => {
                 const selected = picked.includes(m.id);
                 return (
                   <article

@@ -90,6 +90,70 @@ def add_span(
     return span
 
 
+def update_span(
+    db: Session,
+    span_id: uuid.UUID,
+    *,
+    start_message_id: uuid.UUID | None = None,
+    end_message_id: uuid.UUID | None = None,
+    span_type: str | None = None,
+    note: str | None = None,
+    actor: str,
+    actor_model: str | None = None,
+    reason: str | None = None,
+) -> MemorySourceSpan:
+    """调整来源片段的起止范围（或类型/备注）。
+
+    场景：AI（或Owner自己）当初凭印象圈的范围不准，后来原文导进来才发现圈错了。
+    改的是"当前态"，但：
+    - 会 bump 一个新版本（快照含旧范围，可回滚）；
+    - 审计记 before/after，谁改的、改成什么都留痕。
+    """
+    span = db.get(MemorySourceSpan, span_id)
+    if span is None or span.removed_at is not None:
+        raise SpanNotFound("span 不存在或已被移除")
+    memory = db.get(Memory, span.memory_id)
+    if memory is None:
+        raise MemoryNotFound("memory 不存在")
+
+    new_start = start_message_id or span.start_message_id
+    new_end = end_message_id or span.end_message_id
+    new_type = span_type or span.span_type
+    _validate_span(db, memory, span.conversation_id, new_start, new_end, new_type)
+
+    before = {
+        "start_message_id": str(span.start_message_id),
+        "end_message_id": str(span.end_message_id),
+        "span_type": span.span_type,
+    }
+    span.start_message_id = new_start
+    span.end_message_id = new_end
+    span.span_type = new_type
+    if note is not None:
+        span.note = note
+    db.flush()
+
+    bump_version_for_span_change(
+        db,
+        memory,
+        actor=actor,
+        actor_model=actor_model,
+        reason=reason,
+        event_type="span_updated",
+        span_id=span.id,
+        extra_detail={
+            "before": before,
+            "after": {
+                "start_message_id": str(span.start_message_id),
+                "end_message_id": str(span.end_message_id),
+                "span_type": span.span_type,
+            },
+        },
+    )
+    db.commit()
+    return span
+
+
 def remove_span(
     db: Session,
     span_id: uuid.UUID,

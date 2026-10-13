@@ -65,6 +65,20 @@ class SpanCreate(BaseModel):
     reason: str | None = None
 
 
+class SpanUpdate(BaseModel):
+    """改来源范围：只带要改的字段；不改的留 None。
+
+    conversation 不允许在这里换（换会话 = 换出处，应该先删再建，走 span_added/removed）。
+    """
+
+    start_message_id: uuid.UUID | None = None
+    end_message_id: uuid.UUID | None = None
+    span_type: str | None = None
+    note: str | None = None
+    actor_model: str | None = None
+    reason: str | None = None
+
+
 class SpanOut(BaseModel):
     id: uuid.UUID
     memory_id: uuid.UUID

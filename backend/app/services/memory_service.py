@@ -226,11 +226,18 @@ def bump_version_for_span_change(
     reason: str | None,
     event_type: str,
     span_id: uuid.UUID,
+    extra_detail: dict | None = None,
 ) -> None:
-    """span 增删共享的版本+审计逻辑（由 span_service 调用）。"""
+    """span 增删改共享的版本+审计逻辑（由 span_service 调用）。
+
+    extra_detail：改范围时把 before/after 记进审计（只记 id，不记正文）。
+    """
     memory.current_version += 1
     memory.updated_at = datetime.now(UTC)
     _write_version(db, memory, actor=actor, actor_model=actor_model, reason=reason)
+    detail = {"version": memory.current_version, "span_id": str(span_id)}
+    if extra_detail:
+        detail.update(extra_detail)
     audit_service.record(
         db,
         event_type=event_type,
@@ -238,7 +245,7 @@ def bump_version_for_span_change(
         actor_model=actor_model,
         target_type="memory",
         target_id=memory.id,
-        detail={"version": memory.current_version, "span_id": str(span_id)},
+        detail=detail,
     )
 
 

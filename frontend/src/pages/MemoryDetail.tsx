@@ -59,21 +59,62 @@ export default function MemoryDetail() {
   const { id } = useParams();
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState("");
+  const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // 正在调整范围的 span + 该会话的消息列表
+  const [spanEditing, setSpanEditing] = useState<string | null>(null);
+  const [spanRange, setSpanRange] = useState<{ start: string; end: string }>({
+    start: "",
+    end: "",
+  });
 
   const detail = useAsync<Detail>(() => api.get(`/memories/${id}`), [id]);
+  const editingSpan = detail.data?.spans.find((s) => s.id === spanEditing) ?? null;
+  const convMessages = useAsync<{ id: string; role: string; content_text: string | null; sort_order: number }[]>(
+    () => (editingSpan ? api.get(`/conversations/${editingSpan.conversation_id}/messages`) : Promise.resolve([])),
+    [editingSpan?.conversation_id],
+  );
 
   const startEdit = () => {
     setBody(detail.data?.memory.body ?? "");
+    setTitle(detail.data?.memory.title ?? "");
     setEditing(true);
   };
+
+  const startSpanEdit = (span: Span) => {
+    setSpanEditing(span.id);
+    setSpanRange({ start: span.start_message_id, end: span.end_message_id });
+    setError(null);
+    setNotice(null);
+  };
+
+  async function saveSpanRange() {
+    if (!id || !spanEditing) return;
+    setError(null);
+    try {
+      await api.patch(`/memories/${id}/spans/${spanEditing}`, {
+        start_message_id: spanRange.start,
+        end_message_id: spanRange.end,
+        reason: "前端调整来源范围",
+      });
+      setSpanEditing(null);
+      setNotice("来源范围已调整（旧范围留在版本史里，可回滚）");
+      detail.reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   async function save() {
     if (!id || !body.trim()) return;
     setError(null);
     try {
-      await api.patch(`/memories/${id}`, { body: body.trim(), reason: "前端编辑" });
+      await api.patch(`/memories/${id}`, {
+        body: body.trim(),
+        title: title.trim() || null,
+        reason: "前端编辑",
+      });
       setEditing(false);
       setNotice("已保存（新版本已记录）");
       detail.reload();
@@ -146,6 +187,13 @@ export default function MemoryDetail() {
             </div>
             {editing ? (
               <div style={{ marginTop: "var(--rv-space-2)" }}>
+                <input
+                  aria-label="编辑标题"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="标题（可留空）"
+                  style={{ width: "100%", padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)", marginBottom: "var(--rv-space-2)" }}
+                />
                 <textarea
                   aria-label="编辑正文"
                   value={body}
@@ -181,7 +229,7 @@ export default function MemoryDetail() {
             ) : (
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                 {detail.data.spans.map((s) => (
-                  <li key={s.id} style={{ marginBottom: "var(--rv-space-2)" }}>
+                  <li key={s.id} style={{ marginBottom: "var(--rv-space-3)" }}>
                     <span
                       style={{
                         color: s.span_type === "evidence" ? "var(--rv-evidence)" : "var(--rv-context)",
@@ -195,6 +243,60 @@ export default function MemoryDetail() {
                       {s.start_message_id.slice(0, 8)}… → {s.end_message_id.slice(0, 8)}… · 由{" "}
                       {s.created_by_actor}
                     </div>
+
+                    {spanEditing === s.id ? (
+                      <div style={{ marginTop: "var(--rv-space-2)", padding: "var(--rv-space-2)", border: "1px solid var(--rv-accent)", borderRadius: "var(--rv-radius-sm)" }}>
+                        <div style={{ fontSize: "var(--rv-text-sm)", marginBottom: "var(--rv-space-2)" }}>
+                          调整这段来源的起止范围（圈错了可以改，旧范围会留在版本史里）：
+                        </div>
+                        <label style={{ fontSize: "var(--rv-text-xs)" }}>
+                          起始消息
+                          <select
+                            aria-label="起始消息"
+                            value={spanRange.start}
+                            onChange={(e) => setSpanRange((p) => ({ ...p, start: e.target.value }))}
+                            style={{ display: "block", width: "100%", marginTop: "var(--rv-space-1)", padding: "var(--rv-space-1)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
+                          >
+                            {(convMessages.data ?? []).map((m) => (
+                              <option key={m.id} value={m.id}>
+                                #{m.sort_order} {m.role}：{(m.content_text ?? "（空）").slice(0, 40)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label style={{ fontSize: "var(--rv-text-xs)", display: "block", marginTop: "var(--rv-space-2)" }}>
+                          结束消息
+                          <select
+                            aria-label="结束消息"
+                            value={spanRange.end}
+                            onChange={(e) => setSpanRange((p) => ({ ...p, end: e.target.value }))}
+                            style={{ display: "block", width: "100%", marginTop: "var(--rv-space-1)", padding: "var(--rv-space-1)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
+                          >
+                            {(convMessages.data ?? []).map((m) => (
+                              <option key={m.id} value={m.id}>
+                                #{m.sort_order} {m.role}：{(m.content_text ?? "（空）").slice(0, 40)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <div style={{ display: "flex", gap: "var(--rv-space-2)", marginTop: "var(--rv-space-2)" }}>
+                          <button type="button" onClick={saveSpanRange}>
+                            保存范围
+                          </button>
+                          <button type="button" onClick={() => setSpanEditing(null)}>
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startSpanEdit(s)}
+                        style={{ marginTop: "var(--rv-space-1)", fontSize: "var(--rv-text-sm)" }}
+                      >
+                        调整范围
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

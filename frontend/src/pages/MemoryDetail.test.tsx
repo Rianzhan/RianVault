@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 /* Genesis 视图：版本史、来源片段、双时间必须都渲染出来（可追溯的入口在这里）。 */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MemoryDetail from "./MemoryDetail";
@@ -86,17 +87,40 @@ const DETAIL = {
   ],
 };
 
+type Call = { method: string; url: string; body?: unknown };
+let calls: Call[] = [];
+
+const CONVERSATION_MESSAGES = [
+  { id: "aaaaaaaa-0000-0000-0000-000000000001", role: "user", content_text: "把这件事加入记忆库", sort_order: 1, event_time: "2026-08-15T08:00:00Z", source_model: null },
+  { id: "msg-2", role: "assistant", content_text: "好的，已经记住了：咖啡要浅烘。", sort_order: 2, event_time: "2026-08-15T08:00:30Z", source_model: "gpt-4o" },
+  { id: "msg-3", role: "user", content_text: "谢谢，下次记得提醒我。", sort_order: 3, event_time: "2026-08-15T08:01:00Z", source_model: null },
+];
+
 beforeEach(() => {
+  calls = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => ({
-      ok: true,
-      status: 200,
-      statusText: "OK",
-      text: async () => JSON.stringify(DETAIL),
-    })),
+    vi.fn(async (url: string, init: RequestInit = {}) => {
+      const method = init.method ?? "GET";
+      const body = typeof init.body === "string" ? JSON.parse(init.body) : undefined;
+      calls.push({ method, url: String(url), body });
+      const path = String(url);
+      if (path.startsWith("/api/conversations/") && path.endsWith("/messages")) {
+        return json(CONVERSATION_MESSAGES);
+      }
+      return json(DETAIL);
+    }),
   );
 });
+
+function json(value: unknown) {
+  return {
+    ok: true,
+    status: 200,
+    statusText: "OK",
+    text: async () => JSON.stringify(value),
+  };
+}
 
 afterEach(() => {
   cleanup();
@@ -135,6 +159,28 @@ describe("MemoryDetail / Genesis", () => {
     expect(screen.getByText("evidence")).toBeTruthy();
     const link = screen.getByText("跳回原文") as HTMLAnchorElement;
     expect(link.getAttribute("href")).toBe("/conversations/conv-1");
+  });
+
+  it("能调整来源片段的起止范围（PATCH 带正确 payload）", async () => {
+    calls = [];
+    const user = userEvent.setup();
+    renderPage();
+
+    const button = await screen.findByText("调整范围");
+    await user.click(button);
+
+    // 起止下拉会列出该会话的消息
+    await waitFor(() => {
+      expect(screen.getByLabelText("起始消息")).toBeTruthy();
+    });
+    await user.selectOptions(screen.getByLabelText("结束消息"), "msg-3");
+    await user.click(screen.getByText("保存范围"));
+
+    await waitFor(() => {
+      expect(calls.some((c) => c.method === "PATCH" && c.url === "/api/memories/mem-1/spans/span-1")).toBe(true);
+    });
+    const patch = calls.find((c) => c.method === "PATCH" && c.url?.includes("/spans/"));
+    expect(patch?.body).toMatchObject({ start_message_id: DETAIL.spans[0].start_message_id, end_message_id: "msg-3" });
   });
 
   it("渲染审计史事件", async () => {

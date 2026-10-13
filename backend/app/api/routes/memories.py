@@ -17,6 +17,7 @@ from app.schemas.memory import (
     RestoreRequest,
     SpanCreate,
     SpanOut,
+    SpanUpdate,
     VersionOut,
 )
 from app.services import audit_service, memory_service, span_service
@@ -175,6 +176,32 @@ def add_span(
             actor_model=actor_model,
             reason=reason,
             **payload,
+        )
+    except (MemoryValidationError, MemoryNotFound, SpanNotFound) as e:
+        raise _errors(e) from e
+    return SpanOut.model_validate(span)
+
+
+@router.patch("/{memory_id}/spans/{span_id}", response_model=SpanOut)
+def update_span(
+    memory_id: uuid.UUID,
+    span_id: uuid.UUID,
+    req: SpanUpdate,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_any_role),
+) -> SpanOut:
+    """调整来源片段的起止范围（圈错了可以改，会留新版本 + before/after 审计）。"""
+    try:
+        span = span_service.update_span(
+            db,
+            span_id,
+            start_message_id=req.start_message_id,
+            end_message_id=req.end_message_id,
+            span_type=req.span_type,
+            note=req.note,
+            actor=actor.role,
+            actor_model=req.actor_model,
+            reason=req.reason,
         )
     except (MemoryValidationError, MemoryNotFound, SpanNotFound) as e:
         raise _errors(e) from e
