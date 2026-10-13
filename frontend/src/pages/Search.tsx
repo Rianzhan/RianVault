@@ -18,7 +18,7 @@ type Hit = {
 };
 
 type SearchResponse = { mode: string; count: number; hits: Hit[] };
-type Stats = { messages: number; indexed_messages: number };
+type Stats = { messages: number; indexed_messages: number; indexable_messages: number };
 
 export default function Search() {
   const [query, setQuery] = useState("");
@@ -36,10 +36,11 @@ export default function Search() {
 
   // 语义检索只看得到"已索引"的消息——新导入还没建索引时，必须提示，否则像灵异事件
   const stats = useAsync<Stats>(() => api.get("/stats"), []);
-  const total = stats.data?.messages ?? 0;
+  // 分母用"有正文的消息数"：纯图片/空消息本来就不进索引，不算漏
+  const indexable = stats.data?.indexable_messages ?? stats.data?.messages ?? 0;
   const indexed = stats.data?.indexed_messages ?? 0;
-  const indexStale = total > indexed;
-  const indexEmpty = total > 0 && indexed === 0;
+  const indexStale = indexable > indexed;
+  const indexEmpty = indexable > 0 && indexed === 0;
 
   async function buildIndex() {
     setBuilding(true);
@@ -91,7 +92,7 @@ export default function Search() {
           <div style={{ fontSize: "var(--rv-text-sm)" }}>
             {indexEmpty
               ? "语义索引还没有建立：现在用「语义/混合」检索只会得到 0 条（关键词检索不受影响）。"
-              : `有 ${total - indexed} 条消息还没进语义索引（导入后不会自动建索引），语义检索会漏掉它们。`}
+              : `有 ${indexable - indexed} 条消息还没进语义索引（导入后不会自动建索引），语义检索会漏掉它们。`}
           </div>
           <div style={{ display: "flex", gap: "var(--rv-space-2)", marginTop: "var(--rv-space-2)", alignItems: "center" }}>
             <button
@@ -111,7 +112,7 @@ export default function Search() {
               {building ? "建索引中（消息多时要等一会）…" : "补齐语义索引"}
             </button>
             <span style={{ color: "var(--rv-ink-faint)", fontSize: "var(--rv-text-xs)" }}>
-              已索引 {indexed} / {total} 条 · 仅 Owner 可执行
+              已索引 {indexed} / {indexable} 条 · 仅 Owner 可执行
             </span>
           </div>
           {buildNote ? (
