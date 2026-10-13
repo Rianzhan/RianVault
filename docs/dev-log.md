@@ -131,6 +131,28 @@
   ③ 筛选放检索还是原文还是都放。
 - commit：`0d77fbc`、`538f06a`。
 
+## 2026-10-13 — Owner拍板的四项（含产品设计定案）
+
+**Owner的产品决定（重要，后续按此走）：**
+- 记忆的 **正文 = 摘要**（主体），**来源片段 = 引用**（evidence/context）。两者分开，不合并。
+- 正文/标题必须能随便改（本来就能改，改了留新版本）。
+- **来源片段的起止范围允许编辑**——场景：AI（通过 MCP）或Owner自己当初凭印象圈的范围不准，
+  等原文真正导进来才发现圈错了。
+- 筛选：检索页和原文页**都做**（模型/角色/日期区间/平台）。
+
+**实现：**
+- `span_service.update_span` + `PATCH /api/memories/{id}/spans/{span_id}`（SpanUpdate）：
+  改完 bump 新版本（快照含旧范围 → 可回滚）+ 审计 `span_updated` 记 before/after（只记 id）。
+  换会话的跨度拒绝（换出处＝换证据链，应先删再建）。
+- 前端：MemoryDetail 加标题编辑 + 每条来源「调整范围」下拉；ConversationViewer 加消息筛选。
+- 新增 `tests/test_span_update.py`（9 项）、`scripts/smoke_span_update.py`（真机 6/6）。
+- 索引真相：4136 条消息里 426 条空正文（纯图片）本就不进索引；stats 加 `indexable_messages`
+  做分母，避免"永远差 426 条"的假警报。
+- commit：`ab8caf6`。
+
+**未解（等Owner定）：** GPT 通过 MCP 写入时，若那段聊天还没导出成 json，就没有 message id 可绑
+→ 只能先写摘要、等导入后再补绑来源（改范围已支持这条路径）。要不要支持"待补来源"标记，待定。
+
 ### 加固相关坑位
 
 - 测试里用默认 `hybrid` 调 `/api/search` 会去加载 bge-m3 权重（本机默认模型名解析不到就**联网**，
