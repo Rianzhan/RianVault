@@ -8,6 +8,13 @@
 
 设计与审计文档：[RIANVAULT_DESIGN_AUDIT.md](./RIANVAULT_DESIGN_AUDIT.md)
 
+**完整工程交付书（新接手者 / 想从零理解本项目的人，先看这份）：
+[docs/RIANVAULT_HANDOVER.md](./docs/RIANVAULT_HANDOVER.md)**
+—— 面向完全没有项目背景的读者，含 24 章：起源与需求演变、架构全景、数据模型全解、
+端到端流程、检索实现现状、隐私设计、权限模型、逐页与逐 API 说明、导出恢复、
+安全边界、验收脚本逐项解释、状态矩阵、已知限制、Roadmap 与接手指南。
+首次出现的术语都给「英文全称 + 中文 + 在本项目负责什么」。
+
 ## 仓库布局
 
 ```
@@ -109,6 +116,7 @@ python scripts/restore_from_export.py exports/<export_id>.zip \
 
 ## 文档
 
+- [docs/RIANVAULT_HANDOVER.md](./docs/RIANVAULT_HANDOVER.md)：**完整工程交付书**（从零理解本项目，推荐入口）
 - [RIANVAULT_DESIGN_AUDIT.md](./RIANVAULT_DESIGN_AUDIT.md)：设计与审计（A–H 节 + 附录，含验收标准 G.0）
 - [docs/architecture.md](./docs/architecture.md)：落地后的实际结构与不变式
 - [docs/import-format-v1.md](./docs/import-format-v1.md)：JSONL v1 导入格式
