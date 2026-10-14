@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models import ChunkIndex, Conversation, Message
+from app.services import chunking
 from app.services.embedding import EmbeddingProvider, get_embedding_provider
 from app.services.index_service import get_qdrant
 
@@ -38,6 +39,10 @@ class SearchHit:
     event_time: str | None
     score: float
     match_types: list[str] = field(default_factory=list)
+    # 语义命中专属：命中的是这条消息的第几个 chunk，以及那个 chunk 的原文片段。
+    # 用途：让人一眼看出「为什么这条被语义召回了」——精确判断准召，而不是看整段原文瞎猜。
+    chunk_index: int | None = None
+    matched_chunk_text: str | None = None
 
     def as_dict(self) -> dict:
         return {
@@ -51,6 +56,8 @@ class SearchHit:
             "event_time": self.event_time,
             "score": round(self.score, 4),
             "match_types": self.match_types,
+            "chunk_index": self.chunk_index,
+            "matched_chunk_text": self.matched_chunk_text,
         }
 
 
@@ -190,10 +197,28 @@ def semantic_search(
                 event_time=msg.event_time.isoformat() if msg.event_time else None,
                 score=score,
                 match_types=["semantic"],
+                chunk_index=chunk.chunk_index,
+                matched_chunk_text=_matched_chunk_text(
+                    msg.content_text or "", chunk.chunk_index
+                ),
             )
 
     ordered = sorted(hits.values(), key=lambda h: h.score, reverse=True)[:limit]
     return ordered
+
+
+def _matched_chunk_text(content_text: str, chunk_index: int) -> str | None:
+    """按与建索引时完全相同的规则重新切分，取命中 chunk 的原文片段。
+
+    切分是确定性的（同 max_tokens、同边界规则），所以这里不用存原文副本，
+    也能精确还原「向量库里真正被比对的、那一小段文字」。
+    """
+    chunks = chunking.chunk_message(
+        "", "", content_text, max_tokens=get_settings().chunk_max_tokens
+    )
+    if 0 <= chunk_index < len(chunks):
+        return chunks[chunk_index].text
+    return None
 
 
 def _as_uuid(value: str):

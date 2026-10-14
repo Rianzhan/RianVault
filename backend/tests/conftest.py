@@ -4,6 +4,17 @@ import os
 # 限流器本身在 tests/test_hardening.py 里有专门测试（用独立 app、真实配额）。
 os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "0")
 
+# 测试环境关闭「导入后自动建索引」：那个后台线程跑的是**真的 bge-m3**（不是测试替身），
+# 一旦它和主线程同时做 torch 推理，进程会直接段错误崩掉（没有任何 Python 异常可抓）。
+# 而且它会把 4.3GB 模型拉起来拖慢整套用例。需要索引的用例自己显式调
+# index_service.index_messages(db, provider=<替身>)，见 tests/test_search.py。
+os.environ.setdefault("AUTO_INDEX_AFTER_IMPORT", "false")
+
+# 同理关掉启动预热：它会在**每一次** TestClient lifespan 里起一个线程加载真的 bge-m3
+# （4.3GB）。整套用例要起十几个 client，等于十几个线程同时加载大模型 → 内存炸、进程段错误。
+# 语义索引相关的用例自己用 CharBag 替身，不需要真模型。
+os.environ.setdefault("WARMUP_EMBEDDING_ON_STARTUP", "false")
+
 import uuid
 from collections.abc import Iterator
 from pathlib import Path

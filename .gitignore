@@ -10,6 +10,9 @@ data/
 *.sqlite
 *.sqlite3
 *-dev.db
+*-dev.db-journal
+*.db-wal
+*.db-shm
 e2e-*.db
 real_*.json
 conversations.json
@@ -20,6 +23,8 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.pytest-tmp/
+.pytest-tmp*/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/

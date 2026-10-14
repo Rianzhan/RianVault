@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import PageShell from "../components/PageShell";
 import { api } from "../lib/api";
+import { highlight, termsOf } from "../lib/highlight";
 import { useAsync } from "../lib/useAsync";
 
 type Hit = {
@@ -15,6 +16,13 @@ type Hit = {
   event_time: string | null;
   score: number;
   match_types: string[];
+  chunk_index: number | null;
+  matched_chunk_text: string | null;
+};
+
+const MATCH_LABEL: Record<string, { label: string; color: string; bg: string }> = {
+  semantic: { label: "语义", color: "var(--rv-accent)", bg: "var(--rv-accent-soft)" },
+  keyword: { label: "关键词", color: "var(--rv-success, #1a7f37)", bg: "var(--rv-success-soft, #e6f4ea)" },
 };
 
 type SearchResponse = { mode: string; count: number; hits: Hit[] };
@@ -77,6 +85,8 @@ export default function Search() {
       setLoading(false);
     }
   }
+
+  const terms = termsOf(query);
 
   return (
     <PageShell
@@ -223,20 +233,64 @@ export default function Search() {
             </p>
           ) : null}
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {results.hits.map((h) => (
-              <li key={h.message_id} className="rv-card" style={{ marginBottom: "var(--rv-space-2)" }}>
-                <div style={{ fontSize: "var(--rv-text-xs)", color: "var(--rv-ink-faint)" }}>
-                  {h.role}
-                  {h.source_model ? ` · ${h.source_model}` : ""} ·{" "}
-                  {h.event_time ? new Date(h.event_time).toLocaleString() : "（无时间）"} · 得分{" "}
-                  {h.score} · {h.match_types.join("+")}
-                </div>
-                <p style={{ whiteSpace: "pre-wrap", margin: "var(--rv-space-1) 0" }}>{h.content_text}</p>
-                <Link to={`/conversations/${h.conversation_id}`} style={{ fontSize: "var(--rv-text-sm)" }}>
-                  跳回原文{h.conversation_title ? `：${h.conversation_title}` : ""}
-                </Link>
-              </li>
-            ))}
+            {results.hits.map((h) => {
+              const showChunk = !!h.matched_chunk_text && h.matched_chunk_text !== h.content_text;
+              return (
+                <li key={h.message_id} className="rv-card" style={{ marginBottom: "var(--rv-space-2)" }}>
+                  <div style={{ fontSize: "var(--rv-text-xs)", color: "var(--rv-ink-faint)", display: "flex", flexWrap: "wrap", gap: "var(--rv-space-1)", alignItems: "center" }}>
+                    <span>
+                      {h.role}
+                      {h.source_model ? ` · ${h.source_model}` : ""} ·{" "}
+                      {h.event_time ? new Date(h.event_time).toLocaleString() : "（无时间）"} · 得分{" "}
+                      {h.score}
+                    </span>
+                    {h.match_types.map((mt) => {
+                      const m = MATCH_LABEL[mt];
+                      return (
+                        <span
+                          key={mt}
+                          style={{
+                            fontSize: "var(--rv-text-xs)",
+                            color: m.color,
+                            background: m.bg,
+                            border: `1px solid ${m.color}`,
+                            borderRadius: "999px",
+                            padding: "0 8px",
+                            lineHeight: "1.4",
+                          }}
+                        >
+                          {m.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {showChunk ? (
+                    <div
+                      style={{
+                        margin: "var(--rv-space-2) 0",
+                        padding: "var(--rv-space-2)",
+                        background: "var(--rv-accent-soft)",
+                        borderLeft: "3px solid var(--rv-accent)",
+                        borderRadius: "var(--rv-radius-sm)",
+                      }}
+                    >
+                      <div style={{ fontSize: "var(--rv-text-xs)", color: "var(--rv-accent)", fontWeight: 600, marginBottom: "var(--rv-space-1)" }}>
+                        语义命中片段（向量库里真正比对的就是这段，而不是整条原文）
+                      </div>
+                      <p style={{ whiteSpace: "pre-wrap", margin: 0, fontSize: "var(--rv-text-sm)" }}>
+                        {highlight(h.matched_chunk_text as string, terms)}
+                      </p>
+                    </div>
+                  ) : null}
+                  <p style={{ whiteSpace: "pre-wrap", margin: "var(--rv-space-1) 0" }}>
+                    {highlight(h.content_text, terms)}
+                  </p>
+                  <Link to={`/conversations/${h.conversation_id}`} style={{ fontSize: "var(--rv-text-sm)" }}>
+                    跳回原文{h.conversation_title ? `：${h.conversation_title}` : ""}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}

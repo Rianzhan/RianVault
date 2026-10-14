@@ -150,6 +150,84 @@
   做分母，避免"永远差 426 条"的假警报。
 - commit：`ab8caf6`。
 
+## 2026-10-14 — 启动自检 + 检索「证据可见」（高亮 / 命中来源标注）
+
+**Owner的问题（逐条答，见对话；结论记此）：**
+
+| 问题 | 结论（事实，不美化） |
+| --- | --- |
+| 还要手动建索引吗？ | 导入后后台线程自动建（`auto_index_after_import`），也可手动「补齐语义索引」；建索引是增量的，已索引的不会重做。 |
+| 关键词检索是 BM25 吗？ | **不是**。现在是 PostgreSQL `ILIKE` 子串匹配（多词 AND），按时间倒序；关键词命中固定记 0.3 分，没有相关性打分。要 BM25 得上 FTS5/tsvector，待办。 |
+| 结果重排序了吗？ | 语义结果按余弦相似度降序（bge-m3 的分数就是排序依据）；混合＝语义为主 + 关键词补充。**没有 cross-encoder reranker**（bge-reranker 未装，CPU 上再跑一遍很贵，等评测显示精度不够再说）。 |
+| 混合能标出来源吗？ | 已做：后端 `match_types`（`["semantic"]` / `["keyword"]` / 两者都有），前端渲染成彩色胶囊标签。 |
+| 关键词能标亮吗？ | 已做：前端 `highlight()` 把查询词包 `<mark>`（黄底）。 |
+| 语义为什么命中？ | 已做：后端返回 `chunk_index` + `matched_chunk_text`——用建索引时**同一套切分规则**重新切原文取回那一段，前端单独框出来。正文不进向量库，所以是"重切还原"而不是"从向量库读回"。 |
+| 谁切的 chunk？切多大？在哪断？ | `services/chunking.py::chunk_message`，由 `index_service.index_messages` 在建索引时调用。按句末标点（`。！？!?；;`）+ 换行断句，累积到 ≤600 token（`chunk_max_tokens` 可配）成一块；整条消息不超预算就**不切**（单块 index 0）。 |
+| 怎么知道检索全不全？ | 两层：`qdrant-client` 本地模式是 **exact 暴力全扫**（不采样不近似，实测源码里有 `Local mode performs exact (brute-force) search`），所以 top-k 排序是完整精确的；但"语义相关不相关"是模型的判断，**没有真值就量不出召回率**。关键词模式是数据库全表扫描，这一路的召回是完备的，可做交叉验证。 |
+
+**实现：**
+- `services/search_service.py`：`SearchHit` 加 `chunk_index` / `matched_chunk_text`；新增
+  `_matched_chunk_text()`（用 `get_settings().chunk_max_tokens` 重切，保证与建索引时一致）。
+- `frontend/src/lib/highlight.tsx`（新）：`termsOf()`（与后端切词规则一致，含全角空格归一）、
+  `highlight()`（正则转义 + 长度降序 + 大小写不敏感，返回 `ReactNode[]`）。
+- `frontend/src/pages/Search.tsx`：命中头部加「语义 / 关键词」胶囊标签；语义命中额外展示
+  「语义命中片段」框（仅当该条消息真被切成多块时展示，避免与整条原文重复）。
+- 测试：后端 `tests/test_search.py` 加 `test_semantic_hit_carries_matched_chunk`（含"片段必须是原
+  文子串"断言）；前端 `src/lib/highlight.test.tsx`（6 项）。
+
+**坑位：**
+- pytest 默认 basetemp 在系统临时目录，清理时会被沙箱判为"批量删除"而拒绝（表现为莫名 1 个 ERROR）。
+  跑测试统一加 `--basetemp=./.pytest-tmp`（落在仓库内）。
+- Qdrant 本地模式在解释器退出时 `__del__` 抛 `ImportError: sys.meta_path is None`——是关机噪音，
+  不影响测试结果，别当成失败去修。
+- 测试辅助函数递归 `ReactNode` 时**必须先处理数组**：`highlight()` 返回 `ReactNode[]`，
+  只按 `ReactElement` 处理会得到空串（第一次就是这么翻车的）。
+
+**当前运行状态：** 端口 8000 上只有 1 个 python 进程（PID 35104，约 3.7GB＝bge-m3 已驻留），
+热态语义检索约 0.2 秒／次。冷启动首次仍需约 60 秒加载模型（建模在启动线程预热）。
+索引吞吐约 17 条消息/秒（CPU，bge-m3）——2000 万字级别全量重建预计要跑几小时，靠增量避免重做。
+**本轮改动需重启后端才生效。**
+
+## 2026-10-14（下午）— 三个被崩出来的并发 bug（都不是段错误的表象那么简单）
+
+跑全量后端测试时直接**段错误**把整个 pytest 进程带走了（`access violation`，没有任何 Python
+异常可抓）。顺着崩溃栈往下挖，挖出三个真 bug——它们全都会在Owner的日常使用中炸，不只是测试问题：
+
+### ① 导入后自动建索引：并发 torch 推理会崩进程
+
+`schedule_auto_index()` 原来是"每个导入各起一个线程"。Owner一次性导入十几个文件时，
+就会有十几个线程同时用 bge-m3 跑 torch 推理 → 段错误。
+改为**串行**：同一时刻只允许一个 worker，后来的导入标记 `pending`，当前批次跑完再补一轮，
+既覆盖全部新消息，又绝不并发推理。新增 `tests/test_auto_index.py`（3 项）把这条约束钉死。
+
+### ② 上面的 worker 里 `global` 漏写了变量名（会让自动建索引永久失效）
+
+```python
+global _auto_index_pending      # ← 漏了 _auto_index_running
+...
+finally:
+    _auto_index_running = False # ← 实际创建的是**局部变量**，全局标志永远复位不了
+```
+后果：第一次导入后 `_auto_index_running` 永远是 True，**此后所有导入都不会再自动建索引**
+（搜不到新内容，且完全静默）。是刚写的测试把它抓出来的（测 Triton 之外的东西也值了）。
+
+### ③ 启动自检把 Qdrant 单例钉死在开发库上（维度冲突）
+
+`_check_qdrant_exclusive()` 用 `index_service.get_qdrant()` 探测，等于创建了单例并永久缓存。
+测试随后要在临时目录用 256 维替身模型建索引，却拿钉在**开发库 1024 维集合**上的单例 →
+`Vector dimension error: expected dim: 1024, got 256`。
+之前一直没暴露，是因为Owner的后端占着开发库目录，自检必然失败、单例压根没建起来——
+她这边一停，坑就露出来了。**自检改为一次性探针**（`QdrantClient(path=...)` 用完即关），不碰正式单例。
+
+### 顺带：测试环境不再偷偷加载真模型
+
+`conftest.py` 里 `os.environ.setdefault` 关掉 `AUTO_INDEX_AFTER_IMPORT` 与
+`WARMUP_EMBEDDING_ON_STARTUP`：原本每次 TestClient 起 lifespan 都会开线程加载真的 bge-m3
+（4.3GB），整套用例起十几个 client 就是十几份大模型 → 内存炸、段错误。关掉后全量测试从
+「崩/9 分钟」变成 **161 通过 / 4 分 55 秒**。生产里也给预热加了"只起一次"的开关（`start_warmup_once`）。
+
+**验证：** 后端 161 passed（exit=0）；前端 40 passed（含新增 `highlight.test.tsx` 6 项）。
+
 **未解（等Owner定）：** GPT 通过 MCP 写入时，若那段聊天还没导出成 json，就没有 message id 可绑
 → 只能先写摘要、等导入后再补绑来源（改范围已支持这条路径）。要不要支持"待补来源"标记，待定。
 

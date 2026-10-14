@@ -82,6 +82,23 @@ def test_semantic_search_returns_text_from_postgres(db_session: Session, indexed
     assert 0.0 < top.score <= 1.0
 
 
+def test_semantic_hit_carries_matched_chunk(db_session: Session, indexed: dict) -> None:
+    """语义命中要带「命中 chunk」的片段，用于前端解释为什么召回（判断准召）。"""
+    hits = search_service.semantic_search(
+        db_session, "追溯 来源", provider=CharBagEmbeddingProvider()
+    )
+    assert hits
+    top = hits[0]
+    assert top.chunk_index is not None
+    assert top.matched_chunk_text and top.matched_chunk_text.strip()
+    # 命中片段必须来自原文（不能凭空捏造）：去空白后应是原文的子串
+    assert _squash(top.matched_chunk_text) in _squash(top.content_text)
+
+
+def _squash(s: str) -> str:
+    return "".join(s.split())
+
+
 def test_semantic_search_respects_filters(db_session: Session, indexed: dict) -> None:
     hits = search_service.semantic_search(
         db_session,
