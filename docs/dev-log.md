@@ -240,6 +240,28 @@ finally:
 并在 17:47:54 完成 embedding 预热——**之后检索都是热态**。前端 Vite 会自动热更新，
 刷新浏览器搜「爱」即可看到黄底高亮、「语义/关键词」标签与语义命中片段框。
 
+## 2026-10-14（晚）— 回收站（软删除 → 还原 / 彻底删除）
+
+**Owner的要求：** 软删除要二次确认；删了先进回收站；**只有她能彻底删除（AI 身份不行）**。
+
+**实现：**
+- `memory_service.undelete_memory`：回收站还原。关键是**还原到删除前那一刻的状态**——
+  先看上一版快照里的 status 再恢复（否则原本「归档」的记忆会被悄悄变成「活跃」）。
+  还原同样是**追加新版本**（不改写历史），审计记 `memory_restored`。
+- `POST /api/memories/{id}/undelete`（Owner only）。彻底删除复用已有的
+  `DELETE /memories/{id}/purge`（Owner only，物理删 memory + 版本 + span，留一条 `memory_purged` 审计）。
+- `GET /api/auth/me`（新增）：返回 `{role, can_admin}`，让前端据此隐藏 Owner 专属按钮，
+  别摆出点了必然 403 的按钮。**真正的权限判断永远在后端**（`require_owner`），这里只是 UI 收敛。
+- 前端：MemoryLibrary 加「回收站（N）」入口；MemoryDetail 的删除键改为「移进回收站」并二次确认，
+  已删除的记忆显示「从回收站还原」。
+
+**权限矩阵补充（实测）：** zhan_mcp 对 删除 / 还原 / 彻底删除 全部 403（测试 `TestRecycleBin` 覆盖）。
+
+**UX 取舍：** 只有**毁灭性**操作（彻底删除）要点两次确认；还原是无损的，点一次就走，
+不给人添堵。
+
+**验证：** 后端 169 passed（+8），前端 47 passed（+4）。
+
 **未解（等Owner定）：** GPT 通过 MCP 写入时，若那段聊天还没导出成 json，就没有 message id 可绑
 → 只能先写摘要、等导入后再补绑来源（改范围已支持这条路径）。要不要支持"待补来源"标记，待定。
 

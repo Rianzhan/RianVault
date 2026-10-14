@@ -138,6 +138,27 @@ def delete_memory(
     return MemoryOut.model_validate(memory)
 
 
+@router.post("/{memory_id}/undelete", response_model=MemoryOut)
+def undelete_memory(
+    memory_id: uuid.UUID,
+    req: ActorRequest | None = None,
+    db: Session = Depends(get_db),
+    actor: ApiToken = Depends(require_owner),
+) -> MemoryOut:
+    """从回收站还原（Owner only；AI 身份没有这个权限）。"""
+    try:
+        memory = memory_service.undelete_memory(
+            db,
+            memory_id,
+            actor=actor.role,
+            actor_model=req.actor_model if req else None,
+            reason=req.reason if req else None,
+        )
+    except MemoryNotFound as e:
+        raise _errors(e) from e
+    return MemoryOut.model_validate(memory)
+
+
 @router.post("/{memory_id}/restore", response_model=MemoryOut)
 def restore_memory(
     memory_id: uuid.UUID,

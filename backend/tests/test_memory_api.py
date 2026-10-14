@@ -160,3 +160,83 @@ class TestMemoryLifecycle:
             json={"version_number": 42},
         )
         assert resp.status_code == 404
+
+
+class TestRecycleBin:
+    """回收站：软删除 → 进站 → 可还原 / 可彻底删除；AI 身份全程无权。"""
+
+    def _deleted(self, client: TestClient) -> list[dict]:
+        return client.get("/api/memories", params={"status": "deleted"}).json()
+
+    def test_soft_delete_moves_it_into_the_bin(self, client: TestClient) -> None:
+        memory = _create_memory(client, title="待删的记忆")
+        resp = client.request("DELETE", f"/api/memories/{memory['id']}", json={})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["status"] == "deleted"
+
+        # 默认列表里看不见了，回收站里能看见
+        titles = [m["title"] for m in client.get("/api/memories").json()]
+        assert "待删的记忆" not in titles
+        assert "待删的记忆" in [m["title"] for m in self._deleted(client)]
+
+    def test_undelete_brings_it_back(self, client: TestClient) -> None:
+        memory = _create_memory(client, title="误删的记忆")
+        client.request("DELETE", f"/api/memories/{memory['id']}", json={})
+
+        resp = client.post(f"/api/memories/{memory['id']}/undelete", json={})
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["status"] == "active"
+        assert body["current_version"] == memory["current_version"] + 2  # 删除 + 还原各一版
+
+        titles = [m["title"] for m in client.get("/api/memories").json()]
+        assert "误删的记忆" in titles
+        assert self._deleted(client) == []
+
+    def test_purge_removes_everything_and_leaves_one_audit_trace(
+        self, client: TestClient
+    ) -> None:
+        conv, msgs = _import_fixture(client)
+        memory = _create_memory(client, title="要彻底删掉的")
+        client.post(
+            f"/api/memories/{memory['id']}/spans",
+            json={
+                "conversation_id": conv["id"],
+                "start_message_id": msgs[0]["id"],
+                "end_message_id": msgs[-1]["id"],
+                "span_type": "evidence",
+            },
+        )
+        client.request("DELETE", f"/api/memories/{memory['id']}", json={})
+
+        resp = client.request("DELETE", f"/api/memories/{memory['id']}/purge", json={})
+        assert resp.status_code == 200, resp.text
+        result = resp.json()
+        assert result["purged"] is True
+        assert result["versions_removed"] >= 1
+        assert result["spans_removed"] >= 1
+
+        assert client.get(f"/api/memories/{memory['id']}").status_code == 404
+        assert self._deleted(client) == []
+        # 正文没了，但"曾经存在、被谁删的"这条审计留痕还在（不含正文）
+        resp = client.get("/api/audit")
+        assert resp.status_code == 200
+        kinds = [e["event_type"] for e in resp.json()]
+        assert "memory_purged" in kinds
+
+    def test_undelete_of_a_live_memory_does_nothing(self, client: TestClient) -> None:
+        memory = _create_memory(client)
+        resp = client.post(f"/api/memories/{memory['id']}/undelete", json={})
+        assert resp.status_code == 200
+        assert resp.json()["current_version"] == memory["current_version"]
+
+    def test_zhan_cannot_delete_restore_or_purge(self, client: TestClient, zhan_client) -> None:
+        memory = _create_memory(client, title="只有 owner 能动")
+        mid = memory["id"]
+        # AI 身份：删 / 还原 / 彻底删除 全部 403
+        assert zhan_client.request("DELETE", f"/api/memories/{mid}", json={}).status_code == 403
+        assert zhan_client.post(f"/api/memories/{mid}/undelete", json={}).status_code == 403
+        purge = zhan_client.request("DELETE", f"/api/memories/{mid}/purge", json={})
+        assert purge.status_code == 403
+        # 记忆毫发无损（详情路由是 {memory, spans, versions, audit_events} 结构）
+        assert client.get(f"/api/memories/{mid}").json()["memory"]["status"] == "active"

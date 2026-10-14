@@ -278,6 +278,55 @@ def soft_delete_memory(
     return memory
 
 
+def undelete_memory(
+    db: Session,
+    memory_id: uuid.UUID,
+    *,
+    actor: str,
+    actor_model: str | None = None,
+    reason: str | None = None,
+) -> Memory:
+    """从回收站还原（软删除的逆操作）。
+
+    还原到**删除前那一刻的状态**：先看上一版快照里记的 status 是什么，
+    再恢复成它——否则一条原本是「归档/草稿」的记忆会被悄悄变成「活跃」。
+    版本同样是**追加**一个新版本（历史永不被改写），审计留痕 memory_restored。
+    """
+    memory = _get(db, memory_id)
+    if memory.status != "deleted":
+        return memory
+
+    prior_version_number = memory.current_version - 1
+    prior = (
+        db.scalars(
+            select(MemoryVersion)
+            .where(MemoryVersion.memory_id == memory.id)
+            .where(MemoryVersion.version_number == prior_version_number)
+        ).first()
+        if prior_version_number >= 1
+        else None
+    )
+    prior_status = (prior.snapshot or {}).get("status") if prior else None
+    target_status = prior_status if prior_status and prior_status != "deleted" else "active"
+
+    memory.status = target_status
+    memory.deleted_at = None
+    memory.current_version += 1
+    memory.updated_at = datetime.now(UTC)
+    _write_version(db, memory, actor=actor, actor_model=actor_model, reason=reason)
+    audit_service.record(
+        db,
+        event_type="memory_restored",
+        actor=actor,
+        actor_model=actor_model,
+        target_type="memory",
+        target_id=memory.id,
+        detail={"version": memory.current_version, "restored_to": target_status},
+    )
+    db.commit()
+    return memory
+
+
 def purge_memory(
     db: Session,
     memory_id: uuid.UUID,

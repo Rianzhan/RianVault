@@ -314,6 +314,39 @@ class TestDeleteAndRestore:
         with pytest.raises(LookupError):
             memory_service.restore_version(db_session, memory.id, 99, actor="owner")
 
+    def test_undelete_goes_back_to_the_status_before_deletion(self, db_session: Session) -> None:
+        """回收站还原不能把「归档」悄悄变成「活跃」——要还原到删之前那个状态。"""
+        memory = _mk(db_session)
+        # 走正常通道归档（会留版本快照），而不是硬改字段
+        memory_service.update_memory(db_session, memory.id, actor="owner", status="archived")
+        assert memory.status == "archived"
+
+        memory_service.soft_delete_memory(db_session, memory.id, actor="owner")
+        assert memory.status == "deleted"
+
+        memory_service.undelete_memory(db_session, memory.id, actor="owner")
+        assert memory.status == "archived"
+        assert memory.deleted_at is None
+
+    def test_undelete_appends_version_and_audits(self, db_session: Session) -> None:
+        memory = _mk(db_session)
+        memory_service.soft_delete_memory(db_session, memory.id, actor="owner")
+        before = memory.current_version
+
+        memory_service.undelete_memory(db_session, memory.id, actor="owner", reason="误删")
+        assert memory.current_version == before + 1  # 还原也是追加版本，不改写历史
+
+        versions = memory_service.list_versions(db_session, memory.id)
+        assert len(versions) == memory.current_version
+        events = audit_service.list_for_target(db_session, "memory", memory.id)
+        assert events[-1].event_type == "memory_restored"
+        assert events[-1].detail["restored_to"] == "active"
+
+    def test_undelete_of_a_live_memory_is_a_noop(self, db_session: Session) -> None:
+        memory = _mk(db_session)
+        memory_service.undelete_memory(db_session, memory.id, actor="owner")
+        assert memory.current_version == 1  # 没删过就不该产生新版本
+
 
 class TestInvariants:
     def test_versions_count_equals_current_version(

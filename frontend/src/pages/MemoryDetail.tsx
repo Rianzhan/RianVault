@@ -64,6 +64,7 @@ export default function MemoryDetail() {
   const [notice, setNotice] = useState<string | null>(null);
   // 正在调整范围的 span + 该会话的消息列表
   const [spanEditing, setSpanEditing] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [spanRange, setSpanRange] = useState<{ start: string; end: string }>({
     start: "",
     end: "",
@@ -143,7 +144,21 @@ export default function MemoryDetail() {
     setError(null);
     try {
       await api.del(`/memories/${id}`);
-      setNotice("已软删除（仍可在状态筛选里找回）");
+      setNotice("已移进回收站——去「记忆」页右上角的回收站可以还原，或彻底删除。");
+      setConfirmingDelete(false);
+      detail.reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setConfirmingDelete(false);
+    }
+  }
+
+  async function undelete() {
+    if (!id) return;
+    setError(null);
+    try {
+      await api.post(`/memories/${id}/undelete`);
+      setNotice("已从回收站还原（删除前后各留一个版本，历史没有被改写）。");
       detail.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -339,10 +354,35 @@ export default function MemoryDetail() {
             </ul>
           </div>
 
-          <div>
-            <button type="button" onClick={remove} style={{ color: "var(--rv-danger)" }}>
-              软删除
-            </button>
+          <div style={{ display: "flex", gap: "var(--rv-space-2)", alignItems: "center" }}>
+            {detail.data.memory.status === "deleted" ? (
+              <button
+                type="button"
+                onClick={undelete}
+                style={{ border: "1px solid var(--rv-accent)", borderRadius: "var(--rv-radius-sm)", background: "var(--rv-accent-soft)", color: "var(--rv-accent)", padding: "var(--rv-space-1) var(--rv-space-3)", cursor: "pointer" }}
+              >
+                从回收站还原
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => (confirmingDelete ? remove() : setConfirmingDelete(true))}
+                onBlur={() => setConfirmingDelete(false)}
+                style={{
+                  color: confirmingDelete ? "var(--rv-surface)" : "var(--rv-danger)",
+                  background: confirmingDelete ? "var(--rv-danger)" : "transparent",
+                  border: "1px solid var(--rv-danger)",
+                  borderRadius: "var(--rv-radius-sm)",
+                  padding: "var(--rv-space-1) var(--rv-space-3)",
+                  cursor: "pointer",
+                }}
+              >
+                {confirmingDelete ? "确认移进回收站？" : "移进回收站"}
+              </button>
+            )}
+            <span style={{ color: "var(--rv-ink-faint)", fontSize: "var(--rv-text-xs)" }}>
+              软删除后正文/版本/来源片段都还在，随时能还原；彻底删除要到「记忆」页的回收站里做。
+            </span>
           </div>
         </div>
       ) : null}

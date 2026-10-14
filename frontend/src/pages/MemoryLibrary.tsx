@@ -19,26 +19,40 @@ type Memory = {
   tags: string[];
 };
 
+type Me = { name: string; role: string; can_admin: boolean };
+
 const TYPES = ["", "fact", "preference", "event", "relationship", "goal", "note"];
+
+function listParams(q: string, type: string, status: string, inBin: boolean): string {
+  const params = new URLSearchParams({ limit: "200" });
+  if (q.trim()) params.set("q", q.trim());
+  if (type) params.set("memory_type", type);
+  if (inBin) params.set("status", "deleted");
+  else if (status) params.set("status", status);
+  return params.toString();
+}
 
 export default function MemoryLibrary() {
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
+  const [inBin, setInBin] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newBody, setNewBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // 二次确认：先点一下进入待确认态，再点一次才真的执行
+  const [pending, setPending] = useState<{ id: string; action: "purge" | "undelete" } | null>(null);
+
+  // 只有 Owner 能删/还原/彻底删除（后端用 require_owner 强制校验，这里只是别摆出必然 403 的按钮）。
+  // 旧后端还没有 /auth/me 时，宁可按 Owner 显示，不要把功能藏起来。
+  const me = useAsync<Me>(() => api.get("/auth/me"), []);
+  const isOwner = me.data ? me.data.can_admin : true;
 
   const memories = useAsync<Memory[]>(
-    () => {
-      const params = new URLSearchParams({ limit: "200" });
-      if (q.trim()) params.set("q", q.trim());
-      if (type) params.set("memory_type", type);
-      if (status) params.set("status", status);
-      return api.get(`/memories?${params.toString()}`);
-    },
-    [q, type, status],
+    () => api.get(`/memories?${listParams(q, type, status, inBin)}`),
+    [q, type, status, inBin],
   );
+  const trashed = useAsync<Memory[]>(() => api.get("/memories?status=deleted&limit=200"), []);
 
   async function create() {
     if (!newBody.trim()) return;
@@ -55,6 +69,57 @@ export default function MemoryLibrary() {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
+  }
+
+  async function runAction(m: Memory, action: "purge" | "undelete") {
+    setError(null);
+    try {
+      if (action === "purge") await api.del(`/memories/${m.id}/purge`);
+      else await api.post(`/memories/${m.id}/undelete`);
+      setPending(null);
+      memories.reload();
+      trashed.reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setPending(null);
+    }
+  }
+
+  function actionButton(m: Memory, action: "purge" | "undelete", label: string) {
+    // 只有**毁灭性**操作（彻底删除）要点两次确认；还原是无损的，别给人添堵。
+    const armed = pending?.id === m.id && pending.action === action;
+    const needsConfirm = action === "purge";
+    const danger = action === "purge";
+    const onClick = () => {
+      if (!needsConfirm) {
+        void runAction(m, action);
+        return;
+      }
+      if (armed) {
+        void runAction(m, action);
+        return;
+      }
+      setPending({ id: m.id, action });
+    };
+    const text = needsConfirm && armed ? `确认${label}？` : label;
+    return (
+      <button
+        type="button"
+        aria-label={text}
+        onClick={onClick}
+        style={{
+          padding: "2px 10px",
+          border: `1px solid ${danger ? "var(--rv-danger)" : "var(--rv-accent)"}`,
+          borderRadius: "var(--rv-radius-sm)",
+          background: armed && needsConfirm ? "var(--rv-danger)" : "transparent",
+          color: danger ? "var(--rv-danger)" : "var(--rv-accent)",
+          cursor: "pointer",
+          fontSize: "var(--rv-text-xs)",
+        }}
+      >
+        {text}
+      </button>
+    );
   }
 
   return (
@@ -83,47 +148,71 @@ export default function MemoryLibrary() {
           <select
             aria-label="状态"
             value={status}
+            disabled={inBin}
             onChange={(e) => setStatus(e.target.value)}
             style={{ padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
           >
             <option value="">活跃</option>
             <option value="draft">草稿</option>
             <option value="archived">归档</option>
-            <option value="deleted">已删除</option>
+            {inBin ? <option value="deleted">已删除</option> : null}
           </select>
-        </div>
-
-        <div style={{ display: "flex", gap: "var(--rv-space-2)", marginTop: "var(--rv-space-2)", flexWrap: "wrap" }}>
-          <input
-            aria-label="新记忆标题"
-            placeholder="新记忆标题"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            style={{ flex: "1 1 160px", padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
-          />
-          <input
-            aria-label="新记忆正文"
-            placeholder="新记忆正文"
-            value={newBody}
-            onChange={(e) => setNewBody(e.target.value)}
-            style={{ flex: "2 1 240px", padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
-          />
           <button
             type="button"
-            onClick={create}
-            disabled={!newBody.trim()}
+            aria-label="切换回收站"
+            onClick={() => setInBin((v) => !v)}
             style={{
               padding: "var(--rv-space-2) var(--rv-space-3)",
-              border: "1px solid var(--rv-accent)",
+              border: `1px solid ${inBin ? "var(--rv-danger)" : "var(--rv-line-strong)"}`,
               borderRadius: "var(--rv-radius-sm)",
-              background: "var(--rv-accent)",
-              color: "var(--rv-surface)",
+              background: inBin ? "var(--rv-danger)" : "transparent",
+              color: inBin ? "var(--rv-surface)" : "var(--rv-ink-soft)",
               cursor: "pointer",
             }}
           >
-            新建
+            回收站（{trashed.data?.length ?? 0}）
           </button>
         </div>
+
+        {inBin ? (
+          <p className="rv-page-note" style={{ marginTop: "var(--rv-space-2)" }}>
+            这里是软删除的记忆：正文、版本史、来源片段都还在，随时能还原。
+            「彻底删除」会连版本一起物理抹掉（只留一条审计留痕），且需要点两次确认——
+            这一步只有 Owner 能做，AI 身份没有这个权限。
+          </p>
+        ) : (
+          <div style={{ display: "flex", gap: "var(--rv-space-2)", marginTop: "var(--rv-space-2)", flexWrap: "wrap" }}>
+            <input
+              aria-label="新记忆标题"
+              placeholder="新记忆标题"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              style={{ flex: "1 1 160px", padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
+            />
+            <input
+              aria-label="新记忆正文"
+              placeholder="新记忆正文"
+              value={newBody}
+              onChange={(e) => setNewBody(e.target.value)}
+              style={{ flex: "2 1 240px", padding: "var(--rv-space-2)", border: "1px solid var(--rv-line-strong)", borderRadius: "var(--rv-radius-sm)" }}
+            />
+            <button
+              type="button"
+              onClick={create}
+              disabled={!newBody.trim()}
+              style={{
+                padding: "var(--rv-space-2) var(--rv-space-3)",
+                border: "1px solid var(--rv-accent)",
+                borderRadius: "var(--rv-radius-sm)",
+                background: "var(--rv-accent)",
+                color: "var(--rv-surface)",
+                cursor: "pointer",
+              }}
+            >
+              新建
+            </button>
+          </div>
+        )}
         {error ? (
           <p role="alert" style={{ color: "var(--rv-danger)", fontSize: "var(--rv-text-sm)" }}>
             {error}
@@ -154,11 +243,21 @@ export default function MemoryLibrary() {
               {new Date(m.created_at).toLocaleDateString()} · 由 {m.created_by_actor}
               {m.created_by_model ? ` / ${m.created_by_model}` : ""}
             </div>
+            {inBin && isOwner ? (
+              <div style={{ display: "flex", gap: "var(--rv-space-2)", marginTop: "var(--rv-space-2)" }}>
+                {actionButton(m, "undelete", "还原")}
+                {actionButton(m, "purge", "彻底删除")}
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>
       {memories.data && memories.data.length === 0 ? (
-        <p className="rv-page-note">还没有记忆。去「原文」选一段建第一条吧。</p>
+        <p className="rv-page-note">
+          {inBin
+            ? "回收站是空的——没有软删除的记忆。"
+            : "还没有记忆。去「原文」选一段建第一条吧。"}
+        </p>
       ) : null}
     </PageShell>
   );
