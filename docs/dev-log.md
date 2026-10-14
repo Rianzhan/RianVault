@@ -226,7 +226,19 @@ finally:
 （4.3GB），整套用例起十几个 client 就是十几份大模型 → 内存炸、段错误。关掉后全量测试从
 「崩/9 分钟」变成 **161 通过 / 4 分 55 秒**。生产里也给预热加了"只起一次"的开关（`start_warmup_once`）。
 
-**验证：** 后端 161 passed（exit=0）；前端 40 passed（含新增 `highlight.test.tsx` 6 项）。
+**验证：** 后端 161 passed（exit=0）；前端 43 passed。
+新增 `frontend/src/pages/Search.test.tsx`（3 项，覆盖「关键词标亮 / 来源标签可见 / 语义片段框」），
+补齐了这轮改动最后一块没有守门人的地方。
+
+**坑位续（工程）：**
+- 前端测试用 gut role 定位按钮更安全：页面 `<h1>` 标题也叫「检索」，`getByText("检索")` 会撞两个。
+  同理多条结果都有同名标签时要用 `findAllByText`。
+- 测试里 `render()` 只能调一次：helper 里再 render 一次就出现两套 DOM，`getByLabelText` 报
+  "Found multiple elements"。
+
+**当前运行状态（17:47 起）：** 后端已重新拉起（PID 21244，端口 8000），启动自检通过，
+并在 17:47:54 完成 embedding 预热——**之后检索都是热态**。前端 Vite 会自动热更新，
+刷新浏览器搜「爱」即可看到黄底高亮、「语义/关键词」标签与语义命中片段框。
 
 **未解（等Owner定）：** GPT 通过 MCP 写入时，若那段聊天还没导出成 json，就没有 message id 可绑
 → 只能先写摘要、等导入后再补绑来源（改范围已支持这条路径）。要不要支持"待补来源"标记，待定。
