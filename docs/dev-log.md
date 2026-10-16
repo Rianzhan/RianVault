@@ -15,7 +15,7 @@
 
 ## 2026-10-09 — Phase 0：审计（未写任何代码）
 
-- Owner交付长期项目 RianVault（湛Owner私人记忆库）：先完整审计再设计，等「批准开工」才动代码。
+- Owner交付长期项目 RianVault（私人记忆库）：先完整审计再设计，等「批准开工」才动代码。
 - 审计结论（实测）：工作区为空 → 绿地项目；产出 `RIANVAULT_DESIGN_AUDIT.md`（A–H 节 + 附录）。
 - 关键决策：PG 是唯一权威真源、Qdrant 可重建（payload 白名单无正文）；memory 用全量快照版本史，
   span 增删也触发新版本；messages 导入后正文不可变；zhan_mcp 无 delete/restore/权限管理/export；

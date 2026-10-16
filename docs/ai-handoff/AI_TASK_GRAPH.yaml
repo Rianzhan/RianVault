@@ -1,0 +1,144 @@
+# RianVault — 后续任务图（AI handoff companion）
+#
+# 本文件只描述「任务之间的依赖」与「需要 Owner 拍板的门」。
+# 任务的技术细节一律不在此展开，请回 docs/RIANVAULT_HANDOVER.md。
+# gate: owner_decision 表示「未取得 Owner 明确批准前不得开工」。
+
+schema_version: "1.0"
+kind: ai_handoff_task_graph
+generated_at: "2026-10-15T07:43:49Z"
+owner_alias: "Owner"
+canonical_source: "docs/RIANVAULT_HANDOVER.md"
+
+conventions:
+  status_values: [done, in_progress, not_started, blocked]
+  gate_values: [none, owner_decision]
+  principle: "先用评测拿到数字，再决定要不要加复杂度。"
+
+tasks:
+
+  - id: PH15-1
+    title: "检索评测（一）：known-item 自检索，只报 Hit@K / MRR"
+    phase: "Phase 1.5"
+    status: not_started
+    depends_on: []
+    gate: none
+    preconditions:
+      - "必须先停掉运行中的后端（Qdrant 本地模式单进程独占文件锁）"
+      - "必须使用真实 bge-m3，不能用测试替身"
+    outputs:
+      - "Hit@K / MRR 数字（按关键词 / 语义 / 混合分别给出）"
+    terminology_rule: "产出里不得把该指标称为 Recall@K；它是 known-item / self-retrieval"
+    ref: "docs/RIANVAULT_HANDOVER.md §6.5、§19"
+
+  - id: PH15-2
+    title: "检索评测（二）：开放式 P@K / Recall@K（pooled relevance judgment）"
+    phase: "Phase 1.5"
+    status: not_started
+    depends_on: [PH15-1]
+    gate: owner_decision
+    note: "需要人工标注，成本远高于 PH15-1；是否投入由 Owner 决定"
+    outputs:
+      - "人工判定的相关池 + Precision@K / Recall@K / nDCG"
+    ref: "docs/RIANVAULT_HANDOVER.md §6.5"
+
+  - id: PH15-3
+    title: "依评测数字决定是否上 BM25 关键词排序"
+    phase: "Phase 1.5"
+    status: not_started
+    depends_on: [PH15-1]
+    gate: owner_decision
+    ref: "docs/RIANVAULT_HANDOVER.md §6.5、§19"
+
+  - id: PH15-4
+    title: "可选 reranker（bge-reranker-v2-m3，约 2GB）"
+    phase: "Phase 1.5"
+    status: not_started
+    depends_on: [PH15-1]
+    gate: owner_decision
+    hard_rule: "未拿到评测数字前不得下载模型权重"
+    ref: "docs/RIANVAULT_HANDOVER.md §19"
+
+  - id: PH2-1
+    title: "远程 MCP 接口（外部 AI 读写本系统）"
+    phase: "Phase 2"
+    status: not_started
+    depends_on: [PH2-2]
+    gate: owner_decision
+    constraints:
+      - "必须调用与 Web API 相同的 service 层，不允许旁路写库"
+      - "令牌由服务端配置持有，权限上限沿用 zhan_mcp"
+      - "正文外发前必须完成 Owner 对指定 principal/scope 的显式授权"
+      - "逐次审计必须进 audit_events"
+      - "embedding 仍保持本地——此约束不因 MCP 而放宽"
+    ref: "docs/RIANVAULT_HANDOVER.md §14.3、§19"
+
+  - id: PH2-2
+    title: "MCP 授权模型设计（principal / scope / 审计 / 撤销）"
+    phase: "Phase 2"
+    status: not_started
+    depends_on: []
+    gate: owner_decision
+    note: "政策已定（HANDOVER §14.3），实现设计未开工"
+
+  - id: PH2-3
+    title: "未解设计问题：AI 通过 MCP 写入记忆时的署名/溯源归属"
+    phase: "Phase 2"
+    status: not_started
+    depends_on: [PH2-1]
+    gate: owner_decision
+    ref: "docs/dev-log.md"
+
+  - id: PH3-1
+    title: "补 docker/Dockerfile.backend（compose.prod.yml 引用了不存在的文件）"
+    phase: "Phase 3"
+    status: not_started
+    depends_on: []
+    gate: owner_decision
+    severity: high
+    note: "不补则生产部署当前无法构建"
+
+  - id: PH3-2
+    title: "VPS 部署（含 HTTPS 终止、备份调度）"
+    phase: "Phase 3"
+    status: blocked
+    depends_on: [PH3-1]
+    gate: owner_decision
+    blocking_reason: "PH3-1 未做，无法构建镜像"
+
+  - id: HYG-1
+    title: "决定是否清理仓库中已提交的 zip 产物"
+    phase: "hygiene"
+    status: not_started
+    depends_on: []
+    gate: owner_decision
+    note: "抽查确认包内为合成测试数据；但 .gitignore 对 exports-e2e-t7/ 这类目录匹配不到"
+
+  - id: HYG-2
+    title: "修正 .gitignore 使其覆盖 exports-* 类目录"
+    phase: "hygiene"
+    status: not_started
+    depends_on: [HYG-1]
+    gate: none
+
+gates:
+  - id: G-01
+    question: "是否投入人工标注做真正的 P@K / Recall（PH15-2）？"
+    unlocks: [PH15-2]
+  - id: G-02
+    question: "是否上 BM25（PH15-3）与/或 reranker（PH15-4）？"
+    unlocks: [PH15-3, PH15-4]
+  - id: G-03
+    question: "是否开工远程 MCP？如开工，授权的 principal / scope 具体是什么？"
+    unlocks: [PH2-1, PH2-2]
+  - id: G-04
+    question: "是否补 Dockerfile 并推进生产部署？"
+    unlocks: [PH3-1, PH3-2]
+  - id: G-05
+    question: "是否清理已提交的 zip 产物？"
+    unlocks: [HYG-1]
+
+edges_note: >-
+  PH15-1 是当前唯一没有前置依赖、也不需要 Owner 决策的入口任务。
+  PH15-3 / PH15-4 必须在 PH15-1 出数字后再评估，不得凭直觉先做。
+  PH2-* 与 PH3-* 全部处于 owner_decision 门后，未获批不得开工。

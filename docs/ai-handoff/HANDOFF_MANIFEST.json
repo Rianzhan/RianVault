@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0",
+  "kind": "ai_handoff_manifest",
+  "generated_at": "2026-10-15T09:00:34Z",
+  "generated_at_local": "2026-10-15 17:00:34 +0800",
+  "owner_alias": "Owner",
+  "canonical_source": "docs/RIANVAULT_HANDOVER.md",
+  "companion_dir": "docs/ai-handoff",
+  "git": {
+    "branch": "main",
+    "head": "1e781b598274eafcba73b6ed628f6a0f69374f13",
+    "head_short": "1e781b5",
+    "commits_on_branch": 35,
+    "dirty": false,
+    "dirty_entries": [],
+    "note": "历史已脱敏重写：移除误提交的 zip 产物、真实姓名替换为 Owner、作者统一匿名。原 HEAD b0a4486 已被重写。"
+  },
+  "files": [
+    {
+      "path": "docs/RIANVAULT_HANDOVER.md",
+      "bytes": 130519,
+      "sha256": "4adba1bade5f9bfbe7eced2c899fb53fd8889920e4a05c1822c3d86ec183fd90",
+      "role": "canonical_handover"
+    },
+    {
+      "path": "docs/ai-handoff/00_BOOTSTRAP.md",
+      "bytes": 6640,
+      "sha256": "426028617e9f1410196a8259c76800b07fc105b10d8dd3411b45ba527882d29e",
+      "role": "companion"
+    },
+    {
+      "path": "docs/ai-handoff/AI_CONTEXT.json",
+      "bytes": 6828,
+      "sha256": "65c18aa5828c265a26566bb1f04d3b72327c216e1d720bdbfa63e030058b8d86",
+      "role": "companion"
+    },
+    {
+      "path": "docs/ai-handoff/AI_FACTS.jsonl",
+      "bytes": 13158,
+      "sha256": "d1ceed72ea14344cc00c2f1928b443845566e81642000a9fec7df0e37d68a476",
+      "role": "companion"
+    },
+    {
+      "path": "docs/ai-handoff/AI_FAILURES.jsonl",
+      "bytes": 10103,
+      "sha256": "2a8b39aafc4c3c6019d4ae306f8958a8ffdbf609b05322753b91fb8554d33d89",
+      "role": "companion"
+    },
+    {
+      "path": "docs/ai-handoff/AI_TASK_GRAPH.yaml",
+      "bytes": 5031,
+      "sha256": "65b8968b3926081c6fafc7b3ed884648d7c5a37eff96be9007b1d73374c586f1",
+      "role": "companion"
+    }
+  ],
+  "file_count": 6,
+  "source_materials": [
+    "docs/RIANVAULT_HANDOVER.md（唯一 canonical 交付书）",
+    "docs/dev-log.md（开发日志与坑位）",
+    "backend/app/**（业务代码，仅读取未修改）",
+    "backend/tests/**、frontend/src/**/*.test.tsx（测试）",
+    "scripts/acceptance_check.py",
+    "git 历史（34 个提交，HEAD b0a4486）"
+  ],
+  "parse_validation": {
+    "AI_CONTEXT.json": "json.loads OK",
+    "AI_FACTS.jsonl": "40 行逐行 json.loads OK",
+    "AI_FAILURES.jsonl": "11 行逐行 json.loads OK",
+    "AI_TASK_GRAPH.yaml": "yaml.safe_load OK（tasks=11, gates=5）",
+    "00_BOOTSTRAP.md": "token 估算约 2545（保守口径），≤4000"
+  },
+  "semantics_fixes_applied": [
+    {
+      "id": "SEM1",
+      "topic": "检索评测术语",
+      "before": "留一法召回 ⇒ 不需要人工标注就能得到客观 Recall@K",
+      "after": "留一法找回自身 = known-item / self-retrieval，只报 Hit@K / MRR；开放式 P@K / Recall@K 仍需 pooled relevance judgment",
+      "locations": [
+        "docs/RIANVAULT_HANDOVER.md §6.5",
+        "docs/RIANVAULT_HANDOVER.md §19",
+        "docs/RIANVAULT_HANDOVER.md §17 状态矩阵",
+        "docs/RIANVAULT_HANDOVER.md §25.3 #11"
+      ]
+    },
+    {
+      "id": "SEM2",
+      "topic": "第三方 AI 数据政策",
+      "before": "禁止任何第三方 embedding 或 AI API（易被读成永远不会有对外 AI 通道）",
+      "after": "分两层：当前默认不外发且代码无对外 AI 调用点；未来远程 MCP 为有条件例外，须 Owner 对指定 principal/scope 显式授权、变更重新授权、逐次审计、权限上限仍为 zhan_mcp、embedding 仍本地、吊销即失效",
+      "locations": [
+        "docs/RIANVAULT_HANDOVER.md §14.3（新增，唯一权威表述）",
+        "docs/RIANVAULT_HANDOVER.md §0 核心原则",
+        "docs/RIANVAULT_HANDOVER.md §1 Phase 0 决策 3",
+        "docs/RIANVAULT_HANDOVER.md §2.3",
+        "docs/RIANVAULT_HANDOVER.md §14.1",
+        "docs/RIANVAULT_HANDOVER.md §20 排障",
+        "docs/RIANVAULT_HANDOVER.md §24 类比"
+      ]
+    }
+  ],
+  "scope_declaration": {
+    "business_code_modified": false,
+    "tests_modified": false,
+    "config_modified": false,
+    "changed": [
+      "docs/RIANVAULT_HANDOVER.md",
+      "docs/ai-handoff/**（新增）"
+    ],
+    "rule": "完整详情只引用 HANDOVER / dev-log / 代码，不在本目录形成第二套真源。"
+  },
+  "desensitization": {
+    "performed": true,
+    "removed_from_all_history": [
+      "frontend.zip",
+      "backend.zip",
+      "backend/exports-e2e-t7/rianvault-export-20261011-024553.zip"
+    ],
+    "text_replaced": {
+      "岩": "Owner"
+    },
+    "author_anonymized_to": "RianVault Owner <owner@rianvault.local>",
+    "verified_clean": [
+      "no-email",
+      "no-phone",
+      "no-real-token",
+      "no-private-chat",
+      "no-db",
+      "no-env",
+      "no-model-weights"
+    ]
+  }
+}
