@@ -30,7 +30,7 @@ RianVault 的规范化 JSONL 导入格式。Omate、ArenaAI、Cakumi、API 酒�
 ## message 行
 
 ```json
-{"type":"message","conversation_id":"om-100","message_id":"m2","parent_id":"m1","role":"assistant","text":"……","timestamp":"2025-03-14T21:02:30+08:00","model":"gpt-4o","model_note":"manual_by_Owner","extra":{}}
+{"type":"message","conversation_id":"om-100","message_id":"m2","parent_id":"m1","role":"assistant","text":"……","timestamp":"2025-03-14T21:02:30+08:00","model":"gpt-4o","model_note":"manual_by_我","extra":{}}
 ```
 
 | 字段 | 必填 | 说明 |
@@ -42,7 +42,7 @@ RianVault 的规范化 JSONL 导入格式。Omate、ArenaAI、Cakumi、API 酒�
 | `text` | 必填* | 纯文本正文；*role 与 text 至少要有意义地存在，否则进隔离区 |
 | `timestamp` | 可选 | ISO 8601，建议带时区；缺时区按 UTC 存并记 warning，原始字符串保留 |
 | `model` | 可选 | 源模型名，如 `gpt-4o`；进入 `source_model` |
-| `model_note` | 可选 | 模型标注说明，如 `manual_by_Owner`；带 note 视为手工标注 |
+| `model_note` | 可选 | 模型标注说明，如 `manual_by_我`；带 note 视为手工标注 |
 | `content_kind` | 可选 | `text`（默认）/ `multimodal` / `code` / `other` |
 | `content_raw` | 可选 | 原始内容结构（多模态等），原样保留 |
 | `extra` | 可选 | 原样进入 `raw_metadata` |

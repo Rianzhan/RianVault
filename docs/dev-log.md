@@ -2,10 +2,10 @@
 
 日志写在仓库内：仓库之外（WorkBuddy / Agent 目录、全局记忆等）一律不写、不改。
 
-## 工程约定（Owner定，必须遵守）
+## 工程约定（我定，必须遵守）
 
 1. **只增不删**。需要"干净环境"时用带时间戳的新名字（如 `e2e-t7-104457.db`、`exports-e2e-t7/`），
-   旧文件留着不动。要清空或覆盖任何已存在的文件，必须先列出路径 + 理由，等Owner点头。
+   旧文件留着不动。要清空或覆盖任何已存在的文件，必须先列出路径 + 理由，等我点头。
 2. **代码里只允许删自己在系统临时目录里创建的东西**，并写清注释。
 3. 不用 mock 成功冒充完成；测试失败就报失败，不许跳过、不许吞异常。
 4. 私人数据主权：正文/embedding 不出本机；日志不记正文、查询全文、token。
@@ -15,7 +15,7 @@
 
 ## 2026-10-09 — Phase 0：审计（未写任何代码）
 
-- Owner交付长期项目 RianVault（私人记忆库）：先完整审计再设计，等「批准开工」才动代码。
+- 我交付长期项目 RianVault（私人记忆库）：先完整审计再设计，等「批准开工」才动代码。
 - 审计结论（实测）：工作区为空 → 绿地项目；产出 `RIANVAULT_DESIGN_AUDIT.md`（A–H 节 + 附录）。
 - 关键决策：PG 是唯一权威真源、Qdrant 可重建（payload 白名单无正文）；memory 用全量快照版本史，
   span 增删也触发新版本；messages 导入后正文不可变；zhan_mcp 无 delete/restore/权限管理/export；
@@ -23,7 +23,7 @@
 
 ## 2026-10-09 — 迁址 + T0–T4
 
-- Owner确认：仓库根 `C:\Users\Owner\Projects\RianVault`；embedding 默认 `BAAI/bge-m3`；
+- 我确认：仓库根 `C:\Users\我\Projects\RianVault`；embedding 默认 `BAAI/bge-m3`；
   遗失记忆信号 +18 条；未经要求不得改仓库外的 WorkBuddy/Agent 文件。
 - 完成 T0（骨架/compose 安全断言/CI）、T1（0001+0002 迁移）、T2（ChatGPT+JSONL v1 adapter、
   三层幂等 + 对账 + 隔离区）、T3（memory 全量快照版本史 / span / restore=追加 / soft delete / 审计）、
@@ -32,7 +32,7 @@
 
 ## 2026-10-10 — T5 遗失记忆审计
 
-- migration_reviews + 0004 迁移；31 条信号（13 原始 + 18 补充）；只出 candidate，verdict 由 Owner 人工判。
+- migration_reviews + 0004 迁移；31 条信号（13 原始 + 18 补充）；只出 candidate，verdict 由 我 人工判。
 - 从候选建记忆会产生 v1（创建）+ v2（绑 span）——符合"span 增删进版本史"，不是 bug。
 - commit：`85de24b`。同批修了两个隐患（见下"坑位"）：gitignore 吞掉 ORM 包、alembic 与运行时 DB URL 两套解析。
 
@@ -48,7 +48,7 @@
 - `data/*.jsonl`（8 张表，含 chunks 索引状态）+ `markdown/`（记忆 frontmatter + 来源摘录 + 版本史；会话全文）
   + manifest.json + checksums.sha256；向量不导出。
 - `restore_service` 先验 manifest/校验和再写回，按主键幂等，计数对不上直接失败；
-  `scripts/restore_from_export.py` 为 CLI 外壳；`/api/export` 仅 Owner、拒绝路径穿越。
+  `scripts/restore_from_export.py` 为 CLI 外壳；`/api/export` 仅 我、拒绝路径穿越。
 - 验证：pytest 132 绿；`scripts/e2e_t7_check.py` 17 项全过（真实 HTTP 导出/下载 + 真实 CLI 恢复 + 对账）。
 - commit：`0bdc315`。
 
@@ -99,7 +99,7 @@
 
 ## 2026-10-12 — 一键验收脚本（acceptance_check.py）
 
-- Owner反馈"不知道文件在哪、不知道怎么验收"，于是加了 `scripts/acceptance_check.py`：
+- 我反馈"不知道文件在哪、不知道怎么验收"，于是加了 `scripts/acceptance_check.py`：
   自建全新库（带时间戳）→ 起服务 → 造 token → 逐项跑 G.0 → 打印 PASS/FAIL → 关服务。
 - 30/30 通过（约 46 秒，含真机 bge-m3 语义检索）；`--skip-semantic` 可跳过权重加载。
 - 新增 `backend/tests/fixtures/acceptance_chat.json`：2026-08 的「已经记住了」样本，
@@ -108,35 +108,35 @@
   这样手工起服务不用再敲一串环境变量。
 - commit：`b511ea6`。
 
-## 2026-10-12（晚）— Owner实测反馈三处修复
+## 2026-10-12（晚）— 我实测反馈三处修复
 
 - 导出下载 401 → 前端带 token 的 blob 下载（`api.downloadFile`）；401 明确提示去设置页。
 - 语义检索 0 条 → 根因：导入后**不会自动建索引**（设计如此，但 UI 没提示，等于灵异事件）。
-  检索页加「已索引 X / 共 Y」横幅 + 一键补齐 + 0 结果原因提示。Owner的库 4136 条消息、
+  检索页加「已索引 X / 共 Y」横幅 + 一键补齐 + 0 结果原因提示。我的库 4136 条消息、
   chunk_index 0 行、"爱"出现 2260 次——关键词模式本来就能搜到，语义必须先补索引。
 - 选段交互：操作栏沉底看不到 → 改 sticky 悬浮；正文自动带出选中原文（【原文｜role】前缀）。
 - 教训：**"设计上没做"和"用户眼里坏了"是同一件事**。导入完成 → 没建索引 → 检索 0 条，
   这条链路必须当场提示，否则必被当成 bug。
 - commit：`45f01a6`。
 
-## 2026-10-13 — Owner第二批反馈
+## 2026-10-13 — 我第二批反馈
 
 - 导航卡片化 + 大字号 + 侧栏/正文独立滚动（height:100vh + overflow）；原文页加搜会话名。
 - 检索加筛选：模型、角色、起止日期区间（后端补 source_model，前端接齐 date_from/date_to/role/model）。
 - Qdrant 本地模式锁残留：`get_qdrant` 讲清「目录被占用」并提示别手删 .lock；
   `rebuild_qdrant.py` atexit 主动 close；embedding batch 可配置 + 进度日志。
-- **待Owner拍板的设计决策**（本轮先不动，见回复）：
+- **待我拍板的设计决策**（本轮先不动，见回复）：
   ① 记忆要不要加「摘要」字段（evidence/context 之上再加一层 summary）；
   ② span 是否允许增删/编辑（现在只读，靠版本史溯源）；
   ③ 筛选放检索还是原文还是都放。
 - commit：`0d77fbc`、`538f06a`。
 
-## 2026-10-13 — Owner拍板的四项（含产品设计定案）
+## 2026-10-13 — 我拍板的四项（含产品设计定案）
 
-**Owner的产品决定（重要，后续按此走）：**
+**我的产品决定（重要，后续按此走）：**
 - 记忆的 **正文 = 摘要**（主体），**来源片段 = 引用**（evidence/context）。两者分开，不合并。
 - 正文/标题必须能随便改（本来就能改，改了留新版本）。
-- **来源片段的起止范围允许编辑**——场景：AI（通过 MCP）或Owner自己当初凭印象圈的范围不准，
+- **来源片段的起止范围允许编辑**——场景：AI（通过 MCP）或我自己当初凭印象圈的范围不准，
   等原文真正导进来才发现圈错了。
 - 筛选：检索页和原文页**都做**（模型/角色/日期区间/平台）。
 
@@ -152,7 +152,7 @@
 
 ## 2026-10-14 — 启动自检 + 检索「证据可见」（高亮 / 命中来源标注）
 
-**Owner的问题（逐条答，见对话；结论记此）：**
+**我的问题（逐条答，见对话；结论记此）：**
 
 | 问题 | 结论（事实，不美化） |
 | --- | --- |
@@ -191,11 +191,11 @@
 ## 2026-10-14（下午）— 三个被崩出来的并发 bug（都不是段错误的表象那么简单）
 
 跑全量后端测试时直接**段错误**把整个 pytest 进程带走了（`access violation`，没有任何 Python
-异常可抓）。顺着崩溃栈往下挖，挖出三个真 bug——它们全都会在Owner的日常使用中炸，不只是测试问题：
+异常可抓）。顺着崩溃栈往下挖，挖出三个真 bug——它们全都会在我的日常使用中炸，不只是测试问题：
 
 ### ① 导入后自动建索引：并发 torch 推理会崩进程
 
-`schedule_auto_index()` 原来是"每个导入各起一个线程"。Owner一次性导入十几个文件时，
+`schedule_auto_index()` 原来是"每个导入各起一个线程"。我一次性导入十几个文件时，
 就会有十几个线程同时用 bge-m3 跑 torch 推理 → 段错误。
 改为**串行**：同一时刻只允许一个 worker，后来的导入标记 `pending`，当前批次跑完再补一轮，
 既覆盖全部新消息，又绝不并发推理。新增 `tests/test_auto_index.py`（3 项）把这条约束钉死。
@@ -216,7 +216,7 @@ finally:
 `_check_qdrant_exclusive()` 用 `index_service.get_qdrant()` 探测，等于创建了单例并永久缓存。
 测试随后要在临时目录用 256 维替身模型建索引，却拿钉在**开发库 1024 维集合**上的单例 →
 `Vector dimension error: expected dim: 1024, got 256`。
-之前一直没暴露，是因为Owner的后端占着开发库目录，自检必然失败、单例压根没建起来——
+之前一直没暴露，是因为我的后端占着开发库目录，自检必然失败、单例压根没建起来——
 她这边一停，坑就露出来了。**自检改为一次性探针**（`QdrantClient(path=...)` 用完即关），不碰正式单例。
 
 ### 顺带：测试环境不再偷偷加载真模型
@@ -242,15 +242,15 @@ finally:
 
 ## 2026-10-14（晚）— 回收站（软删除 → 还原 / 彻底删除）
 
-**Owner的要求：** 软删除要二次确认；删了先进回收站；**只有她能彻底删除（AI 身份不行）**。
+**我的要求：** 软删除要二次确认；删了先进回收站；**只有她能彻底删除（AI 身份不行）**。
 
 **实现：**
 - `memory_service.undelete_memory`：回收站还原。关键是**还原到删除前那一刻的状态**——
   先看上一版快照里的 status 再恢复（否则原本「归档」的记忆会被悄悄变成「活跃」）。
   还原同样是**追加新版本**（不改写历史），审计记 `memory_restored`。
-- `POST /api/memories/{id}/undelete`（Owner only）。彻底删除复用已有的
-  `DELETE /memories/{id}/purge`（Owner only，物理删 memory + 版本 + span，留一条 `memory_purged` 审计）。
-- `GET /api/auth/me`（新增）：返回 `{role, can_admin}`，让前端据此隐藏 Owner 专属按钮，
+- `POST /api/memories/{id}/undelete`（仅作者）。彻底删除复用已有的
+  `DELETE /memories/{id}/purge`（仅作者，物理删 memory + 版本 + span，留一条 `memory_purged` 审计）。
+- `GET /api/auth/me`（新增）：返回 `{role, can_admin}`，让前端据此隐藏 作者专属按钮，
   别摆出点了必然 403 的按钮。**真正的权限判断永远在后端**（`require_owner`），这里只是 UI 收敛。
 - 前端：MemoryLibrary 加「回收站（N）」入口；MemoryDetail 的删除键改为「移进回收站」并二次确认，
   已删除的记忆显示「从回收站还原」。
@@ -262,7 +262,7 @@ finally:
 
 **验证：** 后端 169 passed（+8），前端 47 passed（+4）。
 
-**未解（等Owner定）：** GPT 通过 MCP 写入时，若那段聊天还没导出成 json，就没有 message id 可绑
+**未解（等我定）：** GPT 通过 MCP 写入时，若那段聊天还没导出成 json，就没有 message id 可绑
 → 只能先写摘要、等导入后再补绑来源（改范围已支持这条路径）。要不要支持"待补来源"标记，待定。
 
 ### 加固相关坑位
@@ -294,7 +294,7 @@ finally:
 - uvicorn 之外自建 logger 默认没有 handler，INFO 不显示：需显式加 `StreamHandler` + `propagate=False`。
 - 本机有死代理：curl 用 `--noproxy '*'`、httpx 用 `trust_env=False`。
 - Git Bash 的 PATH 初始损坏，命令前需
-  `export PATH="/c/Users/Owner/.workbuddy/binaries/PortableGit/versions/1.2.0/usr/bin:$PATH"`。
+  `export PATH="/c/Users/我/.workbuddy/binaries/PortableGit/versions/1.2.0/usr/bin:$PATH"`。
 - `ruff format` 后记得 `ruff check`：格式化可能把行拉长触发 E501。
 
 ### 依赖 / 模型

@@ -1,6 +1,6 @@
 # RianVault 设计审计与第一阶段方案
 
-> Phase 0 交付物 · 2026-10-09 · 状态：**待Owner批准**
+> Phase 0 交付物 · 2026-10-09 · 状态：**待我批准**
 > 本轮只做审计与设计，未编写、未修改任何项目代码。
 
 ---
@@ -8,7 +8,7 @@
 ## 0. 本轮范围
 
 - 完成当前仓库审计（A）、架构方案（B）、Schema 方案（C）、导入策略（D）、检索策略（E）、安全威胁审查（F）、第一阶段实施计划（G）。
-- 本文档不含代码实现。开工以Owner回复「批准开工」为准。
+- 本文档不含代码实现。开工以我回复「批准开工」为准。
 
 ---
 
@@ -18,8 +18,8 @@
 
 实际执行过的检查（非推测）：
 
-1. `ls -la` 当前工作区 `C:\Users\Owner\WorkBuddy\2026-10-09-18-27-25\`（含隐藏文件）
-2. `ls -la` 父目录 `C:\Users\Owner\WorkBuddy\`（排查兄弟项目）
+1. `ls -la` 当前工作区 `C:\Users\我\WorkBuddy\2026-10-09-18-27-25\`（含隐藏文件）
+2. `ls -la` 父目录 `C:\Users\我\WorkBuddy\`（排查兄弟项目）
 3. `find` 在 `Desktop` / `Documents` / `WorkBuddy` 三个位置（深度 3）搜索 `*rianvault*` / `*rian-vault*` / `*rian_vault*`
 4. 抽查兄弟会话目录 `2026-10-09-15-23-47`（内容为另一项目 snowhome「雪山小家」Expo 应用，与 RianVault 无关）与 `Claw`（空目录）
 
@@ -54,7 +54,7 @@
 
 ### A.5 需要注意的一点
 
-当前工作区目录名形如会话临时目录（`2026-10-09-18-27-25`）。**请Owner确认这里就是 RianVault 的永久仓库根**；若另有打算（例如独立磁盘目录），批准开工时一并告知，T0 会在确认的位置 `git init`。
+当前工作区目录名形如会话临时目录（`2026-10-09-18-27-25`）。**请我确认这里就是 RianVault 的永久仓库根**；若另有打算（例如独立磁盘目录），批准开工时一并告知，T0 会在确认的位置 `git init`。
 
 ---
 
@@ -157,7 +157,7 @@ api_tokens（认证主体：owner / zhan_mcp）
 唯一约束：`(source_platform, source_conversation_id)`（源 id 缺失时退化用 `dedup_hash` text unique）
 
 **messages** — 原文，**导入后不可变**
-`id` uuid pk · `conversation_id` fk · `source_message_id` text null · `parent_source_message_id` text null（ChatGPT 树结构）· `sort_order` int（主时间线序）· `role` text（`user`/`assistant`/`system`/`tool`/`unknown`）· `content_text` text null（规范化纯文本）· `content_kind` text（`text`/`multimodal`/`code`/`other`）· `content_raw` jsonb（原始 content 结构）· `event_time` timestamptz null（**事情发生时间**，来自源）· `event_time_raw` text null（源时间字符串原样）· `ingested_at` timestamptz（**导入时间**）· `source_model` text null（如 `gpt-4o`）· `source_model_note` text null（如 `manual_by_Owner`）· `model_label_source` text null（`export`/`manual`；第一阶段**不做系统猜测**）· `import_id` fk · `raw_metadata` jsonb · `dedup_hash` text（无源 id 时的确定性内容哈希）
+`id` uuid pk · `conversation_id` fk · `source_message_id` text null · `parent_source_message_id` text null（ChatGPT 树结构）· `sort_order` int（主时间线序）· `role` text（`user`/`assistant`/`system`/`tool`/`unknown`）· `content_text` text null（规范化纯文本）· `content_kind` text（`text`/`multimodal`/`code`/`other`）· `content_raw` jsonb（原始 content 结构）· `event_time` timestamptz null（**事情发生时间**，来自源）· `event_time_raw` text null（源时间字符串原样）· `ingested_at` timestamptz（**导入时间**）· `source_model` text null（如 `gpt-4o`）· `source_model_note` text null（如 `manual_by_我`）· `model_label_source` text null（`export`/`manual`；第一阶段**不做系统猜测**）· `import_id` fk · `raw_metadata` jsonb · `dedup_hash` text（无源 id 时的确定性内容哈希）
 唯一约束：`(conversation_id, source_message_id)`（源 id 非空时）；`(conversation_id, dedup_hash)` 兜底
 
 **memories**
@@ -253,7 +253,7 @@ ImporterAdapter（协议）
 
 ```json
 {"type":"conversation","format":"rianvault-jsonl-v1","platform":"omate","conversation_id":"...","title":"...","extra":{}}
-{"type":"message","conversation_id":"...","message_id":"...","parent_id":null,"role":"assistant","text":"...","timestamp":"2025-03-14T21:02:11+08:00","model":"gpt-4o","model_note":"manual_by_Owner","extra":{}}
+{"type":"message","conversation_id":"...","message_id":"...","parent_id":null,"role":"assistant","text":"...","timestamp":"2025-03-14T21:02:11+08:00","model":"gpt-4o","model_note":"manual_by_我","extra":{}}
 ```
 
 规则：`extra` 原样进 `raw_metadata`；缺 `message_id` 走内容哈希；时间必须 ISO8601 带时区（缺时区进 warning 并按 UTC 存，原始字符串保留）。完整规范开工后落在 `docs/import-format-v1.md`。
@@ -449,7 +449,7 @@ point id = `chunks.id`；payload 白名单：
 
 ### 附 1 权限矩阵（第一阶段）
 
-| 能力 | Owner（Owner） | Zhan MCP |
+| 能力 | 我（作者本人） | Zhan MCP |
 |---|---|---|
 | search / read | ✅ | ✅ |
 | create memory | ✅ | ✅（带 actor/model + 版本 + 审计） |
@@ -500,7 +500,7 @@ rianvault-export-YYYYMMDD-HHMMSS.zip
 
 ### 附 5 待确认事项（已全部确认，2026-10-09）
 
-1. **永久仓库位置**：✅ 确认为 `C:\Users\Owner\Projects\RianVault`（不使用 WorkBuddy 会话目录；不迁移/复用 snowhome 等无关项目）。
+1. **永久仓库位置**：✅ 确认为 `C:\Users\我\Projects\RianVault`（不使用 WorkBuddy 会话目录；不迁移/复用 snowhome 等无关项目）。
 2. **embedding 默认模型**：✅ `BAAI/bge-m3`。EmbeddingProvider 保持可替换，模型名只在配置中，不硬编码进业务逻辑。
 3. **信号清单**：✅ 在原 13 条基础上补充 18 条（"更新记忆"、"写入记忆"、"已经记住"、"已保存到记忆"、"记忆更新成功"、"记忆写入失败"、"没有写进去"、"记忆满了"、"memory full" 等），已落入 `backend/config/migration_signals.yaml`。所有信号永远只是候选，人工审阅才算数。
-4. **工程边界（新增）**：未经Owner明确要求，不修改 RianVault 仓库之外的 WorkBuddy / Agent 文件（SOUL.md、BOOTSTRAP、身份档案、全局记忆等）。
+4. **工程边界（新增）**：未经我明确要求，不修改 RianVault 仓库之外的 WorkBuddy / Agent 文件（SOUL.md、BOOTSTRAP、身份档案、全局记忆等）。

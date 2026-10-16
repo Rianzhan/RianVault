@@ -28,7 +28,7 @@ scripts/    重建索引、从导出恢复等运维脚本
 ## 验收（一条命令）
 
 ```bash
-cd C:/Users/Owner/Projects/RianVault
+cd C:/Users/我/Projects/RianVault
 python scripts/acceptance_check.py                 # 全量，约 1 分钟（含真机语义检索）
 python scripts/acceptance_check.py --skip-semantic # 不加载 2GB 权重，约 20 秒
 ```
@@ -89,7 +89,7 @@ source_platform / source_model / event_time` 五个中性字段，
 ## 一键导出与恢复（T7）
 
 ```bash
-# 导出（仅 Owner；POST /api/export → GET /api/export/{id}/download）
+# 导出（仅 我；POST /api/export → GET /api/export/{id}/download）
 curl -X POST -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/export
 curl -OJ -H "Authorization: Bearer $TOKEN" \
   http://127.0.0.1:8000/api/export/<export_id>/download

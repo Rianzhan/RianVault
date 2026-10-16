@@ -5,7 +5,7 @@
 
 > **Windows 注意：别用系统全局 Python**（它没装项目依赖，会报
 > `No module named uvicorn` / `'alembic' is a package`）。始终用仓库自带环境：
-> `C:\Users\Owner\Projects\RianVault\.venv\Scripts\python.exe`。
+> `C:\Users\我\Projects\RianVault\.venv\Scripts\python.exe`。
 > `scripts\acceptance_check.py` 会自动切换，其他命令要手动指定（下面都写好了）。
 
 ## 1. 日常启动
@@ -18,7 +18,7 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000
 Windows CMD 实际命令（backend 里已放好 `.env`，不用再敲环境变量）：
 
 ```bat
-cd C:\Users\Owner\Projects\RianVault\backend
+cd C:\Users\我\Projects\RianVault\backend
 ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -28,7 +28,7 @@ cd C:\Users\Owner\Projects\RianVault\backend
 前端（另一个终端）：
 
 ```bat
-cd C:\Users\Owner\Projects\RianVault\frontend
+cd C:\Users\我\Projects\RianVault\frontend
 npm run dev      # http://localhost:5173，/api 代理到 8000
 ```
 
@@ -48,7 +48,7 @@ npm run dev      # http://localhost:5173，/api 代理到 8000
 ## 3. 备份与恢复
 
 ```bash
-# 导出（Owner）
+# 导出（仅作者）
 curl -X POST -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/export
 curl -OJ -H "Authorization: Bearer $TOKEN" \
   http://127.0.0.1:8000/api/export/rianvault-export-YYYYMMDD-HHMMSS.zip/download
