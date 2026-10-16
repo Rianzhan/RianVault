@@ -747,14 +747,37 @@ POST /api/search  { query, mode: keyword|semantic|hybrid, filters }
 | BM25 | 经典关键词相关性打分算法，比子串匹配更合理 | **未实现**，当前是 ILIKE |
 | Retrieval evaluation | 检索评测：用标注集量化「搜得准不准、全不全」 | **未做**，没有任何 gold set |
 | Known-item queries | 「我知道有这么一条，看你能不能搜出来」型的测试查询 | 未做 |
-| **Known-item / self-retrieval**（本项目称「留一法找回自身」） | 抽 N 条已入库消息，用其中一句有代表性的话当查询，看它能否在 top-K 里**找回它自己** | 拟做（Phase 1.5）。⚠️ **这是 known-item 自检索，不是真正的 Recall@K** |
+| **Known-item / self-retrieval**（本项目称「留一法找回自身」） | 抽 N 条已入库消息，用其中一句有代表性的话当查询，看它能否在 top-K 里**找回它自己** | **✅ 已完成第一版**（2026-10-16，30 题，结果见下）⚠️ 这是 known-item 自检索，不是真正的 Recall@K |
 | Pooled relevance judgment | 把多个检索器的 top 结果混在一起人工判定，减少标注量 | 未做；**开放式 recall/precision 的前置条件** |
-| Hit@K | 前 K 条里有没有至少一条相关 | 未测（自检索可直接给出） |
-| MRR | Mean Reciprocal Rank：第一条相关结果平均排在「第几位的倒数」，1.0 表示总在第一位 | 未测（自检索可直接给出） |
+| Hit@K | 前 K 条里有没有至少一条相关 | **已测**：semantic / hybrid = 1.00，keyword = 0.87（30 题，K=10） |
+| MRR | Mean Reciprocal Rank：第一条相关结果平均排在「第几位的倒数」，1.0 表示总在第一位 | **已测**：semantic / hybrid = 1.00，keyword = 0.87 |
 | Precision@K | 前 K 条里有多少是真的相关 | 未测；**自检索给不出，必须人工判定** |
 | Recall@K | 所有相关的里面，被找回来多少 | 未测；**自检索给不出，必须人工判定** |
 | nDCG | 折损累计增益：考虑排序位置的相关性打分 | 未测；需要分级相关性标注 |
 | reranker | 对 top-K 再精排一遍（如 bge-reranker-v2-m3） | **未实现、未下载** |
+
+#### ✅ 第一版结果（2026-10-16，30 题，K=10）
+
+| mode | Hit@1 | Hit@10 | MRR | 命中 |
+|---|---|---|---|---|
+| keyword | 0.867 | 0.867 | 0.867 | 26/30 |
+| **semantic** | **1.000** | **1.000** | **1.000** | **30/30** |
+| **hybrid** | **1.000** | **1.000** | **1.000** | **30/30** |
+
+**怎么读这个结果（重要，别过度解读）：**
+
+- 这是在 6,785 条已索引消息上跑的（另有约 3,000 条尚未进索引，出题时已排除）。
+- **semantic 100% 是 known-item 方法的应有表现，不是「语义检索很强」的证明**——用原句搜原文，
+  同一句子 embedding 后的相似度天然最高。它的真正价值是**回归测试**：证明切块、索引、embedding
+  整条管线零退化（12 条造题时连自己都搜不回的句子已被过滤，其余全部找回）。
+- **keyword 0.867 说明有 4 条关键词搜不到**——值得看一眼是分词问题还是跨块问题。
+- hybrid 与 semantic 完全一致，符合实现（语义为主、关键词补位）。
+- 简历/PS 上可写："Evaluated retrieval with known-item/self-retrieval (30 queries, Hit@10 & MRR);
+  semantic and hybrid both reached 1.00, keyword 0.87 — confirming the indexing pipeline is
+  free of degradation."**不要**把它写成检索质量的整体证明。
+
+脚本：`scripts/eval_build_known_item_set.py`（造题 + 答案唯一性验证）、`scripts/eval_known_item.py`（三档对比）。
+查询集与报告在 `backend/exports/eval/`（gitignore 覆盖，**文件里只有 message_id，无任何正文**）。
 
 #### ⚠️ 术语纪律：不要把「留一法找回自身」说成 Recall@K
 
@@ -1502,7 +1525,7 @@ python scripts/acceptance_check.py --skip-semantic # 不加载 bge-m3，约 20 �
 | 前端 9 个页面 | 已实现 | 47 项前端测试 | 手工 UI 验证有限 |
 | **BM25 关键词排序** | **未实现** | — | 待评测后再决定 |
 | **reranker（重排序）** | **未实现、未下载** | — | 待评测证明有需要 |
-| **检索评测：known-item 自检索（Hit@K / MRR）** | **未实现** | — | Phase 1.5 第一件事，零标注即可跑 |
+| **检索评测：known-item 自检索（Hit@K / MRR）** | **已实现（第一版）** | `scripts/eval_known_item.py` + `exports/eval/` | 2026-10-16 跑出结果，见 §6.5 |
 | **检索评测：开放式 P@K / Recall（pooled judgment）** | **未实现** | — | 需人工标注，自检索替代不了 |
 | **远程 MCP 接口** | **未实现** | — | 第二阶段 |
 | **外部 AI 读写记忆** | **未实现** | — | 依赖 MCP |
@@ -1593,11 +1616,9 @@ T0–T10 全部完成并通过一键验收（30/30）：导入管线、记忆域
 目标：**先用数字说话，再决定要不要加复杂度**。
 
 1. **Retrieval Evaluation（检索评测）**：建立评测集与脚本。
-   - **第一步（零标注，先做这个）**：**known-item / self-retrieval**
-     （本项目的「留一法找回自身」）——抽 N 条已入库消息，用其中有代表性的句子当查询，
-     看它能否在 top-K 里找回它自己。
-     报告指标为 **Hit@K** 与 **MRR**。
-     ⚠️ **这不是 Recall@K**，不要这样命名（理由见 6.5「术语纪律」）。
+   - **第一步（零标注）✅ 已完成（2026-10-16）**：**known-item / self-retrieval**
+     30 题（答案唯一性已逐条验证），结果 semantic/hybrid = Hit@10 1.00、MRR 1.00，keyword 0.87。
+     ⚠️ 这不是 Recall@K（理由见 6.5「术语纪律」）。
    - **第二步（需要人工标注）**：开放式 **Precision@K / Recall@K / nDCG**
      必须走 **pooled relevance judgment**（把关键词/语义/混合的 top-K 混成池子人工判相关）。
      自检索**替代不了**这一步，也**推算不出**这两个指标。
@@ -1998,7 +2019,7 @@ cd backend && ../.venv/Scripts/python.exe ../scripts/e2e_t6_check.py
 | 8 | **`deploy/compose.prod.yml` 引用的 Dockerfile 不存在**：`dockerfile: ../docker/Dockerfile.backend`，仓库内无任何 Dockerfile | **高** | 生产部署**当前无法构建**；Phase 3 前必须先补 |
 | 9 | **Git 里提交了压缩包产物**：`backend.zip`、`frontend.zip`、`backend/exports-e2e-t7/rianvault-export-20261011-024553.zip` | 中（潜在风险高） | 抽查确认导出包内是**合成测试数据**，无真实私人聊天；但 `.gitignore` 只忽略名为 `exports/` 的目录，`exports-e2e-t7/` 匹配不到 → 将来真实导出若落在同类目录会被提交 |
 | 10 | **Docker 从未实际运行验证**：全程用 Qdrant 本地模式 + SQLite | 中 | compose 能否真正起来未经验证 |
-| 11 | 检索质量**无任何量化证据**：没有 gold set，也没有任何 Hit@K / MRR / P@K / Recall 数字 | 中 | 「语义检索好不好」目前只能凭感觉。低成本的第一步是 known-item 自检索（**只报 Hit@K / MRR**）；真正的 P@K / Recall 仍需人工 pooled judgment，无法靠自检索绕过 |
+| 11 | ~~检索质量无任何量化证据~~ **已部分解决**：2026-10-16 完成 known-item 自检索第一版（semantic/hybrid Hit@10 = 1.00，keyword 0.87，见 §6.5）。仍缺：开放式 P@K / Recall（pooled judgment）与更大查询集 | ~~中~~ 低 | known-item 只证明管线零退化；真实检索体验仍需开放评测 |
 | 12 | Qdrant 本地模式**单进程独占**：跑评测/重建脚本必须停服务 | 中（运行约束） | 已知但必须在文档中明确，否则新 Agent 会踩 |
 | 13 | 切块规则与 `CHUNK_MAX_TOKENS` 改变后**必须重建索引** | 中 | 否则「重切还原」的命中片段与库内块对不上 |
 | 14 | 大规模真实数据（2000 万字级）**从未验证**；CPU 建索引约 17 条消息/秒 | 中 | 全量重建预计数小时 |
