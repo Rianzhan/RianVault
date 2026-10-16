@@ -1,13 +1,10 @@
 # RianVault 完整工程交付书 / Handover Document
 
-> **关于本文档（作者前言）**
+> **关于本文档**
 >
-> 这是我自己为 RianVault 撰写并持续维护的工程文档。写它的目的，是把这个系统的设计动机、
-> 架构取舍、隐私边界和「目前到底做到哪一步」讲清楚——给未来的自己，也给需要理解这个项目的人。
->
-> 文中第一人称「我」指作者本人；面向读者的「你」指正在读这份文档的人。
-> 我把自己没做的事也如实标注为「未实现」，把设计文档与代码不一致的地方单列成第 25 章，
-> 而不是粉饰成已经完成。这份文档的价值在于可核查，不在于好看。
+> 这是 RianVault 的工程说明文档：系统为什么这样设计、目前做到哪一步、如何验证。
+> 写给需要理解或接手这个项目的人，也写给未来的自己。
+> 设计文档与代码不一致的地方，单列在第 25 章。
 
 > 这份文档假设读者**从零开始**：没参与过任何讨论、没看过聊天记录、不懂后端、数据库、
 > 向量检索、RAG。所有专业术语第一次出现时都给出「英文全称 + 中文 + 在 RianVault 里具体
@@ -65,8 +62,8 @@
 
 ### RianVault 是什么
 
-RianVault 是**我的私人档案馆**：把她多年来在各类 AI 聊天平台上的对话原文、以及从这些对话里
-提炼出的「记忆」，长期保存在**她自己拥有的机器**上，可以随时检索、追溯、迁移。
+RianVault 是**我的私人档案馆**：把我多年来在各类 AI 聊天平台上的对话原文、以及从这些对话里
+提炼出的「记忆」，长期保存在**我自己拥有的机器**上，可以随时检索、追溯、迁移。
 
 ### 为什么要做
 
@@ -77,7 +74,7 @@ RianVault 是**我的私人档案馆**：把她多年来在各类 AI 聊天平�
   第 8 章要打捞的「遗失记忆」）；
 - 把私人聊天交给第三方服务做索引，等于把隐私交出去。**当前策略是：默认不外发**
   （embedding 本地跑，不调任何第三方 AI/embedding API）；唯一的例外通道是未来的远程 MCP，
-  而它必须先经 我 显式授权指定对象与范围，并留审计（见 14.3）。
+  而它必须先经我显式授权指定对象与范围，并留审计（见 14.3）。
 
 所以目标是：**原文永远在自己手里，任何「智能」能力都在本机完成，随时能整体迁走。**
 
@@ -98,7 +95,7 @@ RianVault 是**我的私人档案馆**：把她多年来在各类 AI 聊天平�
 ### 现在还不能做什么（重要，别误会）
 
 - **还没有**把系统接给外部 AI 使用的 MCP 接口（第二阶段）。
-- **还没有**部署到 VPS（自有服务器）上，目前只在我自己的 Windows 机器上跑。
+- **还没有**部署到 VPS（自有服务器）上，目前只在本机（Windows）运行。
 - 关键词检索**还不是** BM25（只是简单的子串匹配）；**没有**重排序模型。
 - **还没有**任何检索质量的量化评测（没建过人工标注集），所以「语义检索到底好不好」
   目前只有主观感受，没有数字。
@@ -108,7 +105,7 @@ RianVault 是**我的私人档案馆**：把她多年来在各类 AI 聊天平�
 
 1. **数据主权**：原文与向量永远在本机/自有服务器。**当前默认不向任何第三方 AI 外发私人正文**，
    embedding 一律本地运行（详见 14.3「第三方 AI 数据政策」）。
-   未来一旦要接远程 MCP，只在 **我 对指定 principal / scope 显式授权后**才可披露，且必须审计。
+   未来一旦要接远程 MCP，只在 **我对指定 principal / scope 显式授权后**才可披露，且必须审计。
 2. **PostgreSQL 是唯一真源**：Qdrant 只是可随时删掉重建的索引；正文一个字都不进向量库。
 3. **一切可追溯**：每条记忆都能指回原始聊天片段；每次改动都有版本与审计留痕。
 4. **历史不可改写**：版本是「追加新版本」，不是「覆盖旧版本」。
@@ -125,11 +122,11 @@ RianVault 是**我的私人档案馆**：把她多年来在各类 AI 聊天平�
 
 ### Phase 0：空仓库审计（2026-10-09）
 
-**当时的问题**：我提出「我想做一个能长期保存、检索、追溯、迁移私人聊天与衍生记忆的系统」，
+**当时的需求**：「做一个能长期保存、检索、追溯、迁移私人聊天与衍生记忆的系统」，
 但仓库是完全空的（绿地项目 / Greenfield）。在写第一行代码之前，先做了一次完整审计，
 产出 [`RIANVAULT_DESIGN_AUDIT.md`](../RIANVAULT_DESIGN_AUDIT.md)。
 
-**为什么先审计而不是直接写**：我的工作方式明确要求「先审计后开工，明确批准后才动代码」。
+**为什么先审计而不是直接写**：这个项目的工作方式是「先审计后开工，明确批准后才动代码」。
 审计结论是：**不要急着写功能，先把真源、索引、权限、隐私边界定死**，否则后面每一次改动
 都要推倒重来。
 
@@ -230,7 +227,7 @@ RianVault 是**我的私人档案馆**：把她多年来在各类 AI 聊天平�
 - **新增**：`migration_reviews` 表、`migration_audit_service.py`、
   `backend/config/migration_signals.yaml`（31 条信号词）、前端打捞页面。
 - **关键决策**：**命中信号 ≠ 真实记忆写入**。系统只负责把候选连上下文列出来，
-  判定（verdict）一律由我人工完成，系统永不自动认定、永不自动建记忆。
+  判定（verdict）一律由人工完成，系统永不自动认定、永不自动建记忆。
 - **证据**：`tests/test_migration_audit.py`；验收脚本第 13–15 项。
 
 ### T6 — 本地 embedding + Qdrant + 检索
@@ -278,7 +275,7 @@ RianVault 是**我的私人档案馆**：把她多年来在各类 AI 聊天平�
 
 - **要解决的问题**：「做完了」不能靠嘴说，也不能靠几十条命令手工跑。
 - **新增**：`scripts/acceptance_check.py`（第 15 章逐项解释）。
-- **关键设计**：自建**带时间戳的新数据库**，不碰我的现有数据；起服务、造 token、逐项跑，
+- **关键设计**：自建**带时间戳的新数据库**，不碰现有数据；起服务、造 token、逐项跑，
   最后打印 `通过 30 / 30`。
 
 > 后续（T10 之后）的产品决策与 bug 修复记录在 `docs/dev-log.md`，包括：来源片段范围可编辑、
@@ -371,7 +368,7 @@ RianVault 是**我的私人档案馆**：把她多年来在各类 AI 聊天平�
 | FastAPI 路由 | 请求参数、service 返回值 | 不写业务逻辑、不直接改表 |
 | Service 层 | 全部表、Qdrant、embedding | 不得绕过权限检查；不得把正文写进日志 |
 | Qdrant | 向量 + `chunk_id` + 中性过滤字段 | **绝不含正文**（写入前有白名单断言，测试守着） |
-| 外部世界 | 无 | **当前**不允许把正文/向量发给任何第三方服务；唯一例外是未来 我 显式授权范围内的远程 MCP（14.3） |
+| 外部世界 | 无 | **当前**不允许把正文/向量发给任何第三方服务；唯一例外是未来经我显式授权的远程 MCP（14.3） |
 
 ---
 
@@ -552,13 +549,13 @@ span 只是「引用」。复制一份就会有两份真相。
   → 所以你手抖传了两次，不会得到两份聊天记录。
 
 - **event_time（事件时间）**：这条消息**在当时**是什么时候发的。来自导出文件的时间戳；
-  原始字符串也存一份 `event_time_raw`（防止解析规则变了我们还能重算）。
+  原始字符串也存一份 `event_time_raw`（防止解析规则变了还能重算）。
 
 - **ingested_at（摄入时间）**：这条消息**什么时候被导入进 RianVault**。是系统时间。
   → 为什么两个都要？2023 年的聊天在 2026 年导入，`event_time` 是 2023，`ingested_at` 是 2026。
   混在一起就没法回答「我哪天导入的」。
 
-- **raw_metadata（原始元数据）**：导出文件里那些我们**没有专门做字段**的内容，原样存进
+- **raw_metadata（原始元数据）**：导出文件里那些**没有专门做字段**的内容，原样存进
   JSON 列。理由：现在不需要，不代表以后不需要；丢了就再也找不回来。
 
 - **model label（模型标签）**：这条消息是哪个模型生成的（`source_model`）。
@@ -584,7 +581,7 @@ span 只是「引用」。复制一份就会有两份真相。
 ### 5.1 具体例子
 
 你在「原文」页打开一个会话，选中第 12～15 条消息，选择**类型 = 证据（evidence）**，
-写下结论：「我偏好安静、有空间感的环境。」然后保存。
+写下结论：「喜欢安静、有空间感的环境。」然后保存。
 
 ```
  ① 在 Conversation Viewer 选中消息 A～D（起止顺序反了也没关系，前端会纠正）
@@ -653,7 +650,7 @@ span 只是「引用」。复制一份就会有两份真相。
   （读上一版快照里的 status，不会把「归档」悄悄变成「活跃」），并且也追加一个新版本。
 - **彻底删除**：`DELETE /api/memories/{id}/purge` → 物理删除 memory + 版本 + spans，
   只留一条 `memory_purged` 审计留痕（说明「它曾经存在、被谁删的」）。
-- **权限**：以上三个**只有 我**。AI 身份（`zhan_mcp`）对三者全部得到 403，
+- **权限**：以上三个**仅 owner 角色**。AI 身份（`zhan_mcp`）对三者全部得到 403，
   且前端不会给它显示这些按钮。
 
 ---
@@ -855,7 +852,7 @@ Qdrant **本地文件模式独占存储目录**：**同一时刻只能有一个�
 - **signal（信号词）**：一句「疑似记忆写入动作」的话，共 **31 条**，例如
   `记住`、`加入记忆库`、`存好了`、`保存失败`、`没存进去`、`记忆库满了`、
   以及英文的 `Model set context updated.`。
-  配置文件可以**随时增补**（`backend/config/migration_signals.yaml`，由我确认过清单）。
+  配置文件可以**随时增补**（`backend/config/migration_signals.yaml`，经人工确认过的清单）。
 - **candidate（候选）**：一条消息命中了某个信号词 → 生成一条候选记录。
   同一条消息最多一条候选（`signal_message_id` 唯一，重复扫描幂等）。
 - **context（上下文）**：候选消息**前后各若干条**（默认窗口 6 条，可配），
@@ -1018,7 +1015,7 @@ Qdrant **本地文件模式独占存储目录**：**同一时刻只能有一个�
   结果里：**关键词命中会标亮查询词**；**语义命中会额外框出「命中片段」**；
   每条结果带「语义」「关键词」标签。
 - 调用：`POST /api/search`、`GET /api/stats`（判断是否索引已覆盖）、
-  `POST /api/index/build`（补齐索引，我）。
+  `POST /api/index/build`（补齐索引，owner）。
 - 常见错误：语义检索 0 条 → 多半是还没建索引，页面顶部会提示并可一键补齐；
   503 → 另一个后端进程占着索引目录。
 
@@ -1069,7 +1066,7 @@ Qdrant **本地文件模式独占存储目录**：**同一时刻只能有一个�
 ## 11. API 全量说明
 
 以下**直接读取当前路由文件**整理（`backend/app/api/routes/`），不是照抄旧设计。
-权限列：`公开`（无需令牌）/ `任意`（owner 与 zhan_mcp 皆可）/ `我`（仅 owner）。
+权限列：`公开`（无需令牌）/ `任意`（owner 与 zhan_mcp 皆可）/ `owner`。
 
 ### 11.1 健康与身份
 
@@ -1082,9 +1079,9 @@ Qdrant **本地文件模式独占存储目录**：**同一时刻只能有一个�
 
 | 方法 | 路径 | 权限 | 请求 | 返回 | 写到 |
 |---|---|---|---|---|---|
-| POST | `/api/imports` | 我 | multipart 文件 + 可选 `source_type` | `{already_imported, import_, quarantine[]}` | imports / conversations / messages / import_quarantine |
-| GET | `/api/imports` | 我 | — | 导入台账列表 | 读 imports |
-| GET | `/api/imports/{id}` | 我 | — | 单次导入详情（含隔离区） | 读 |
+| POST | `/api/imports` | owner | multipart 文件 + 可选 `source_type` | `{already_imported, import_, quarantine[]}` | imports / conversations / messages / import_quarantine |
+| GET | `/api/imports` | owner | — | 导入台账列表 | 读 imports |
+| GET | `/api/imports/{id}` | owner | — | 单次导入详情（含隔离区） | 读 |
 
 审计：导入本身不写 `audit_events`；**导出**才写（见下）。
 
@@ -1105,10 +1102,10 @@ Qdrant **本地文件模式独占存储目录**：**同一时刻只能有一个�
 | GET | `/api/memories` | 任意 | 列表；`status` 显式传 `deleted` 可看回收站（默认排除） | — | — |
 | GET | `/api/memories/{id}` | 任意 | 详情（记忆 + spans + versions + audit） | — | 404 |
 | PATCH | `/api/memories/{id}` | 任意 | 改标题/正文/类型/状态/重要性/双时间/标签 → 新版本 | ✅ | 400（已删除不能改）/404 |
-| DELETE | `/api/memories/{id}` | **我** | 软删除 → 新版本 | ✅ memory_deleted | 403/404 |
-| POST | `/api/memories/{id}/undelete` | **我** | 从回收站还原 → 新版本 | ✅ memory_restored | 403/404 |
-| POST | `/api/memories/{id}/restore` | **我** | 回滚到指定版本（**追加**新版本） | ✅ version_restored | 403/404/400 |
-| DELETE | `/api/memories/{id}/purge` | **我** | 彻底删除（记忆+版本+spans） | ✅ memory_purged | 403/404 |
+| DELETE | `/api/memories/{id}` | **owner** | 软删除 → 新版本 | ✅ memory_deleted | 403/404 |
+| POST | `/api/memories/{id}/undelete` | **owner** | 从回收站还原 → 新版本 | ✅ memory_restored | 403/404 |
+| POST | `/api/memories/{id}/restore` | **owner** | 回滚到指定版本（**追加**新版本） | ✅ version_restored | 403/404/400 |
+| DELETE | `/api/memories/{id}/purge` | **owner** | 彻底删除（记忆+版本+spans） | ✅ memory_purged | 403/404 |
 | POST | `/api/memories/{id}/spans` | 任意 | 新增来源片段 → 新版本 | ✅ span_added | 400/404 |
 | PATCH | `/api/memories/{id}/spans/{sid}` | 任意 | 调整片段起止/类型/备注 → 新版本（审计记 before/after） | ✅ span_updated | 400/404 |
 | DELETE | `/api/memories/{id}/spans/{sid}` | 任意 | 移除片段（软移除）→ 新版本 | ✅ span_removed | 404 |
@@ -1121,14 +1118,14 @@ Qdrant **本地文件模式独占存储目录**：**同一时刻只能有一个�
 |---|---|---|---|
 | POST | `/api/search` | 任意 | `{query, mode, limit, filters{platform, conversation_id, role, source_model, date_from, date_to}}`；返回 `{mode, count, hits[]}` |
 | GET | `/api/index/status` | 任意 | 各模型的 chunk 数、总 chunk 数、collection 名 |
-| POST | `/api/index/build` | **我** | `{rebuild, limit_messages}` 建/重建索引 |
+| POST | `/api/index/build` | **owner** | `{rebuild, limit_messages}` 建/重建索引 |
 | GET | `/api/index/chunks` | 任意 | 列出 chunk 登记记录（调试用） |
 
 ### 11.6 遗失记忆打捞
 
 | 方法 | 路径 | 权限 | 说明 | 写审计 |
 |---|---|---|---|---|
-| POST | `/api/audit/migration-candidates/scan` | **我** | `{scan_from, scan_to, source_platform?}` 扫描候选（幂等） | ❌ |
+| POST | `/api/audit/migration-candidates/scan` | **owner** | `{scan_from, scan_to, source_platform?}` 扫描候选（幂等） | ❌ |
 | GET | `/api/audit/migration-candidates` | 任意 | 候选列表（可按 verdict 过滤） | — |
 | POST | `/api/audit/migration-candidates/{id}/verdict` | 任意 | 人工判定 + 备注 | ❌ |
 | POST | `/api/audit/migration-candidates/{id}/create-memory` | 任意 | 从候选建正式记忆（可指定上下文范围与 span 类型） | ✅（走 memory_service） |
@@ -1137,14 +1134,14 @@ Qdrant **本地文件模式独占存储目录**：**同一时刻只能有一个�
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| POST | `/api/export` | **我** | 打一个 zip，返回 export_id |
-| GET | `/api/export` | **我** | 历史导出列表 |
-| GET | `/api/export/{id}/download` | **我** | 下载 zip |
-| GET | `/api/export/status` | **我** | 导出状态 |
-| GET | `/api/audit` | **我** | 全站最近审计事件 |
-| POST | `/api/admin/tokens` | **我** | 铸造令牌（**明文只出现这一次**） |
-| GET | `/api/admin/tokens` | **我** | 令牌列表（只有哈希与元数据） |
-| POST | `/api/admin/tokens/{id}/revoke` | **我** | 吊销 |
+| POST | `/api/export` | **owner** | 打一个 zip，返回 export_id |
+| GET | `/api/export` | **owner** | 历史导出列表 |
+| GET | `/api/export/{id}/download` | **owner** | 下载 zip |
+| GET | `/api/export/status` | **owner** | 导出状态 |
+| GET | `/api/audit` | **owner** | 全站最近审计事件 |
+| POST | `/api/admin/tokens` | **owner** | 铸造令牌（**明文只出现这一次**） |
+| GET | `/api/admin/tokens` | **owner** | 令牌列表（只有哈希与元数据） |
+| POST | `/api/admin/tokens/{id}/revoke` | **owner** | 吊销 |
 | GET | `/api/stats` | 任意 | 会话/消息/记忆/片段/已索引/可索引/未审阅候选计数 |
 
 > 全局错误码：`401` 无令牌或令牌无效、`403` 角色不够、`404` 对象不存在、
@@ -1318,12 +1315,12 @@ rianvault-export-YYYYMMDD-HHMMSS.zip
 | **安全响应头** | `middleware.SECURITY_HEADERS` | 防被 iframe 嵌套点击劫持、MIME 嗅探、referrer 泄漏 |
 | **未处理异常只回 `error_id`** | `core/errors.py` | 防 500 响应把异常细节（可能夹带 SQL 参数＝正文）回吐给客户端 |
 | **限流（写操作与检索）** | `RateLimitMiddleware` | 防脚本失控 / 意外循环把机器压垮；也提高暴力尝试成本 |
-| **软删除 + 回收站** | `memory_service.soft_delete/undelete/purge` | 防误删；彻底删除只给 我 且要二次确认 |
+| **软删除 + 回收站** | `memory_service.soft_delete/undelete/purge` | 防误删；彻底删除仅 owner 角色且需二次确认 |
 
 ### 14.2 目前**仍然没有解决**的安全问题（不要装作已达生产级）
 
 1. **没有人类登录密码 / 没有会话管理**：谁拿到 owner 令牌谁就是 owner。
-   未来若要给「我登录」加密码，必须用 Argon2id（已在 `core/security.py` 注释里写明）。
+   未来若要加登录密码，必须用 Argon2id（已在 `core/security.py` 注释里写明）。
 2. **没有 HTTPS**：开发环境是 `http://127.0.0.1`。生产要靠 Caddy 终止 TLS，
    **但那属于第三阶段，尚未部署**。
 3. **没有应用层加密**：数据库文件/导出 zip 都是明文。机器被物理接触即可读。
@@ -1357,13 +1354,13 @@ rianvault-export-YYYYMMDD-HHMMSS.zip
 Phase 2 的远程 MCP 会让外部 AI（如 GPT）**读**本系统的记忆。那意味着正文会离开本机，
 进入第三方模型上下文。这条通道**不是**默认开启，必须同时满足：
 
-1. **我 显式授权**，且授权是针对**指定 principal**（＝「谁」，哪一个具体的 AI / agent /
+1. **经我显式授权**，且授权是针对**指定 principal**（＝「谁」，哪一个具体的 AI / agent /
    账号）与**指定 scope**（＝「能看什么、能写什么、多长时间」），而不是笼统开关。
 2. **授权是一次决定，不是一次配置**：换 principal 或扩 scope 都要重新授权。
 3. **逐次审计**：谁、在什么时间、读了/写了哪条记忆，必须进 `audit_events`，
-   我 事后可查。
+   我事后可查。
 4. **权限沿用 `zhan_mcp` 上限**：可读写记忆与检索，**不得**删除 / 导出 / 管令牌 /
-   重建索引（第 9 章权限矩阵）。即使 我 授权，也不自动获得 我 级破坏性能力。
+   重建索引（第 9 章权限矩阵）。即使经我授权，也不自动获得 owner 级破坏性能力。
 5. **embedding 仍然本地**：授权外部 AI「读取检索结果」≠ 把正文交给第三方做向量化。
    无论 MCP 是否开放，`services/embedding.py` 的本地约束与「零第三方调用」测试**都不放宽**。
 6. **撤销即生效**：令牌可吊销（`api_tokens.revoked_at`），吊销后该 principal 立即失效。
@@ -1378,7 +1375,7 @@ Phase 2 的远程 MCP 会让外部 AI（如 GPT）**读**本系统的记忆。�
 | 「禁止第三方 AI」＝ 永远不能有 MCP | 错。是有条件的例外，条件见上；MCP 未开工，当前仍是无外发 |
 | 有了 MCP 之后，第三方就能拿到全部原文 | 错。受 principal/scope 限制，且只给授权的读取路径 |
 | MCP 上线后可以顺势换云端 embedding | 错。embedding 本地是独立不变式 |
-| 我 授权 = 永久授权 | 错。可吊销；换 principal/scope 需重新授权 |
+| 我的授权 = 永久授权 | 错。可吊销；换 principal/scope 需重新授权 |
 
 ---
 
@@ -1390,7 +1387,7 @@ python scripts/acceptance_check.py                 # 全量（含真机语义检
 python scripts/acceptance_check.py --skip-semantic # 不加载 bge-m3，约 20 秒
 ```
 
-**它会不会碰我的数据**：**不会**。它新建一个**带时间戳的新数据库文件**，自带服务与令牌，
+**它会不会碰现有数据**：**不会**。它新建一个**带时间戳的新数据库文件**，自带服务与令牌，
 跑完关掉服务。旧文件一个都不删（符合仓库「只增不删」约定）。
 
 ### 15.1 30 项逐条在测什么
@@ -1466,7 +1463,7 @@ python scripts/acceptance_check.py --skip-semantic # 不加载 bge-m3，约 20 �
 
 **四种测试的区别（一次讲清）**：
 - **mock test（替身测试）**：把外部依赖（如 embedding 模型）换成假的，
-  只验证「我这段逻辑对不对」。快、稳定，但**不能证明真实模型下也对**。
+  只验证「这段逻辑对不对」。快、稳定，但**不能证明真实模型下也对**。
 - **integration test（集成测试）**：真数据库 + 真 Qdrant + 假模型，验证「零件装起来转不转」。
 - **E2E（端到端）**：真模型、真数据库、真服务，从用户动作跑到结果。慢，但最接近真实。
 - **acceptance test（验收测试）**：把「什么叫做完」逐条自动化。它回答的是
@@ -1546,7 +1543,7 @@ python scripts/acceptance_check.py --skip-semantic # 不加载 bge-m3，约 20 �
    - 切块规则一旦改变（或 `CHUNK_MAX_TOKENS` 改了），**必须重建索引**，
      否则检索时「重切还原」的片段会对不上。
 9. **CPU 上的 bge-m3 性能有限**：实测建索引约 **17 条消息/秒**。
-   我的目标是 2000 万字级别，全量重建预计要跑**数小时**；靠增量索引缓解，但没有加速手段
+   目标是 2000 万字级别，全量重建预计要跑**数小时**；靠增量索引缓解，但没有加速手段
    （未上 GPU、未做批量优化之外的手段）。
 10. **记忆（Memory）本身没有被向量化**：语义检索只覆盖**消息原文**；
     记忆库只能用筛选 + 关键词找（设计文档「附 4」明确列为第一阶段非目标）。
@@ -1577,7 +1574,7 @@ python scripts/acceptance_check.py --skip-semantic # 不加载 bge-m3，约 20 �
     **直接段错误崩溃**；任何新增的「后台跑模型」代码都必须遵守同样的串行约束
     （见 `tests/test_auto_index.py`）。
 20. **Windows 双 Python 陷阱**：系统 Python 没装项目依赖，所有命令必须走
-    `C:\Users\我\Projects\RianVault\.venv\Scripts\python.exe`。
+    `C:\Users\Owner\Projects\RianVault\.venv\Scripts\python.exe`。
 21. **测试环境的临时目录**：pytest 默认把临时目录放在系统 temp，某些环境下清理会被
     安全策略拦截而报错。本项目统一用 `--basetemp=./.pytest-tmp`（已加入 `.gitignore`）。
 
@@ -1617,7 +1614,7 @@ T0–T10 全部完成并通过一键验收（30/30）：导入管线、记忆域
   令牌由服务端配置持有，权限沿用 `zhan_mcp`（可读写记忆、检索，**不能删除/导出/管令牌**）。
 - 一个**未解的设计问题**（记录在 `docs/dev-log.md`）：AI 通过 MCP 写入记忆时，
   若那段聊天还没导出成 json，就没有 message id 可绑定来源片段——需要「待补来源」机制。
-- 以下条目来自 **我 的长期规划**，仓库内**尚无设计细节文档**，此处只记录需求目标，
+- 以下条目来自**我的长期规划**，仓库内**尚无设计细节文档**，此处只记录需求目标，
   **不代为设计架构**：
   - `get_bootstrap_context`（AI 接入时先给一段背景上下文）
   - recent changes / memory health（最近变更与记忆健康度）
@@ -1647,7 +1644,7 @@ T0–T10 全部完成并通过一键验收（30/30）：导入管线、记忆域
 2. `RIANVAULT_DESIGN_AUDIT.md` —— 原始设计决策与理由（注意：部分内容已被实现超越，
    差异见本文件第 25 章）。
 3. `docs/architecture.md` —— 落地后的实际分层与不变式（**注意测试数量已过时**）。
-4. `docs/dev-log.md` —— 按时间线的决策、踩坑、我的产品拍板。**必读**，
+4. `docs/dev-log.md` —— 按时间线的决策、踩坑、产品拍板记录。**必读**，
    里面有「为什么这么做」的一手记录。
 5. `backend/app/models/` —— 11 张表，先把数据形状装进脑子。
 6. `backend/app/services/` —— 唯一写入路径，业务全在这里。
@@ -1657,7 +1654,7 @@ T0–T10 全部完成并通过一键验收（30/30）：导入管线、记忆域
 
 ```bash
 # 一律用仓库自带 venv（系统 Python 没有依赖）
-cd C:/Users/我/Projects/RianVault
+cd C:/Users/Owner/Projects/RianVault
 .venv/Scripts/python.exe -m pip install -e "backend[dev]"
 
 cd backend
@@ -1673,7 +1670,7 @@ cd frontend && npm install && npm run dev                # http://localhost:5173
 
 **怎么验证环境对了**：
 ```bash
-cd C:/Users/我/Projects/RianVault
+cd C:/Users/Owner/Projects/RianVault
 python scripts/acceptance_check.py --skip-semantic       # 约 20 秒，应打印 通过 N / N
 ```
 
@@ -1716,7 +1713,7 @@ cd backend && ../.venv/Scripts/python.exe ../scripts/e2e_t6_check.py
 - ❌ 把失败吞掉装成功（catch 了不记不抛、返回空结果）。
 - ❌ 用真实私人数据做 CI fixture / 提交到仓库。
 - ❌ 删除已有私人数据（含「顺手清理」旧库文件）。
-- ❌ 未经 我 批准执行**破坏性迁移**（drop table / 覆盖数据 / 全量重建）。
+- ❌ 未经批准执行**破坏性迁移**（drop table / 覆盖数据 / 全量重建）。
 - ❌ 在仓库之外的位置写项目日志（工程约定：日志只写在仓库内 `docs/dev-log.md`）。
 
 ---

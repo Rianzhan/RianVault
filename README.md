@@ -28,7 +28,7 @@ scripts/    重建索引、从导出恢复等运维脚本
 ## 验收（一条命令）
 
 ```bash
-cd C:/Users/我/Projects/RianVault
+cd C:/Users/Owner/Projects/RianVault
 python scripts/acceptance_check.py                 # 全量，约 1 分钟（含真机语义检索）
 python scripts/acceptance_check.py --skip-semantic # 不加载 2GB 权重，约 20 秒
 ```
@@ -36,7 +36,7 @@ python scripts/acceptance_check.py --skip-semantic # 不加载 2GB 权重，约 
 它会自建一个全新的库（带时间戳，不动你现有数据）、起服务、造 token，
 然后逐项跑 G.0 完成标准（导入幂等 / 选段建记忆 / 版本史 / 检索 / 遗失记忆审计 /
 导出恢复对账 / 权限矩阵 / 安全头），最后打印 `通过 30 / 30`。
-任何一项 FAIL 都会把原因打印出来，把输出原样发给我就行。
+任何一项 FAIL 都会把原因打印出来，把输出原样附上即可。
 
 日常启动与手工验收步骤见 [docs/ops-runbook.md](./docs/ops-runbook.md)。
 
@@ -89,7 +89,7 @@ source_platform / source_model / event_time` 五个中性字段，
 ## 一键导出与恢复（T7）
 
 ```bash
-# 导出（仅 我；POST /api/export → GET /api/export/{id}/download）
+# 导出（仅 owner；POST /api/export → GET /api/export/{id}/download）
 curl -X POST -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/export
 curl -OJ -H "Authorization: Bearer $TOKEN" \
   http://127.0.0.1:8000/api/export/<export_id>/download

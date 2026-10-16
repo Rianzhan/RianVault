@@ -23,7 +23,7 @@
 
 ## 2026-10-09 — 迁址 + T0–T4
 
-- 我确认：仓库根 `C:\Users\我\Projects\RianVault`；embedding 默认 `BAAI/bge-m3`；
+- 我确认：仓库根 `C:\Users\Owner\Projects\RianVault`；embedding 默认 `BAAI/bge-m3`；
   遗失记忆信号 +18 条；未经要求不得改仓库外的 WorkBuddy/Agent 文件。
 - 完成 T0（骨架/compose 安全断言/CI）、T1（0001+0002 迁移）、T2（ChatGPT+JSONL v1 adapter、
   三层幂等 + 对账 + 隔离区）、T3（memory 全量快照版本史 / span / restore=追加 / soft delete / 审计）、
@@ -294,7 +294,7 @@ finally:
 - uvicorn 之外自建 logger 默认没有 handler，INFO 不显示：需显式加 `StreamHandler` + `propagate=False`。
 - 本机有死代理：curl 用 `--noproxy '*'`、httpx 用 `trust_env=False`。
 - Git Bash 的 PATH 初始损坏，命令前需
-  `export PATH="/c/Users/我/.workbuddy/binaries/PortableGit/versions/1.2.0/usr/bin:$PATH"`。
+  `export PATH="/c/Users/Owner/.workbuddy/binaries/PortableGit/versions/1.2.0/usr/bin:$PATH"`。
 - `ruff format` 后记得 `ruff check`：格式化可能把行拉长触发 E501。
 
 ### 依赖 / 模型
